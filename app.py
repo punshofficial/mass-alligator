@@ -17,7 +17,7 @@ def load_config():
             return yaml.safe_load(f) or {}
     return {
         "auth_token": "",
-        "default": {"label_id": 0, "genre_id": 0},
+        "default": {"label_id": 0, "genre_id": 0, "platform_ids": []},
         "artists": {},
         "labels": {},
         "presets": {}
@@ -49,7 +49,13 @@ label_id = st.sidebar.number_input(
 genre_id = st.sidebar.number_input(
     "Default Genre ID", defaults.get("genre_id", 0), step=1, key="default_genre"
 )
-config["default"] = {"label_id": label_id, "genre_id": genre_id}
+platforms_raw = st.sidebar.text_input(
+    "Default Platform IDs (comma)",
+    ",".join(str(x) for x in defaults.get("platform_ids", [])),
+    key="default_platforms"
+)
+platform_ids = [int(x) for x in platforms_raw.split(",") if x.strip().isdigit()]
+config["default"] = {"label_id": label_id, "genre_id": genre_id, "platform_ids": platform_ids}
 
 # Prepare HTTP session
 session = requests.Session()
@@ -228,10 +234,18 @@ def upload_release(base, files):
         "labelId":    preset["label_id"],
         "genres":     [{"genreId": preset["genre_id"]}],
         "tracks":     [{"trackId": track0}],
-        "countries":  []
+        "countries":  [],
+        "platformIds": config["default"].get("platform_ids", [])
     }
     r2 = session.put(f"https://v2api.musicalligator.com/api/releases/{rid}", json=meta_release)
     st.write(f"Metadata updated: {r2.status_code}")
+
+    if config["default"].get("platform_ids"):
+        r_platforms = session.put(
+            f"https://v2api.musicalligator.com/api/releases/{rid}/platforms",
+            json=config["default"]["platform_ids"]
+        )
+        st.write(f"Platforms set: {r_platforms.status_code}")
 
     # 3) Upload cover
     if "cover" in files:
@@ -265,7 +279,7 @@ def upload_release(base, files):
             "lyricists":      preset["lyricists"]
         }
         r5 = session.put(
-            f"https://v2api.musicalligator.com/api/releases/{rid}/tracks/{track0}",
+            f"https://v2api.musicalligator.com/api/tracks/{track0}",
             json=track_meta
         )
         st.write(f"Track metadata updated: {r5.status_code}")

@@ -1,0 +1,135 @@
+artists:
+  8D PARADISE: 86271
+  8DVOLUME: 86108
+  DJMVS: 85774
+  DZINNINI: 86366
+  EBLN: 86276
+  HWAREYOU?: 85756
+  Himerkina Bella: 86373
+  JISUO: 86333
+  K-POP SQUAD: 86326
+  KAZIOL: 86370
+  LiSO4ka: 86357
+  Tommy Pdras: 86277
+  wiolets: 85809
+  "\u0420\u041E\u0417\xC9": 86338
+auth_token: 2181e986-0b74-460f-bd1a-81f7062ec9cb
+default:
+  genre_id: 0
+  label_id: 0
+  platform_ids: []
+labels:
+  8D PARADISE: 41602
+  8DVOLUME: 41515
+  DJMVS: 41344
+  DZINNINI: 41653
+  EBLN: 41605
+  HWAREYOU?: 41334
+  Himerkina Bella: 41657
+  JISUO: 41628
+  K-POP SQUAD: 41623
+  KAZIOL: 41655
+  LiSO4ka: 41647
+  wiolets: 41371
+  "\u0420\u041E\u0417\xC9": 41631
+presets:
+  8D PARADISE:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  8DVOLUME:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  DJMVS:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  DZINNINI:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  EBLN:
+    composers:
+    - 79130
+    genre_id: 196
+    label_id: 41605
+    language_id: 7
+    lyricists:
+    - 79130
+    recording_year: 2025
+  HWAREYOU?:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  Himerkina Bella:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  JISUO:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  K-POP SQUAD:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  KAZIOL:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  LiSO4ka:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  Tommy Pdras:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  wiolets:
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025
+  "\u0420\u041E\u0417\xC9":
+    composers: []
+    genre_id: 0
+    label_id: 41657
+    language_id: 7
+    lyricists: []
+    recording_year: 2025

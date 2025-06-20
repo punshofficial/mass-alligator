@@ -1,0 +1,153 @@
+Request URL:
+https://v2api.musicalligator.com/api/labels?_status=READY&name=&level=REGULAR&skip=0&limit=100&_changes=true
+Request Method:
+GET
+Status Code:
+200 OK
+Remote Address:
+16.170.120.113:443
+Referrer Policy:
+strict-origin-when-cross-origin
+access-control-allow-origin:
+*
+access-control-expose-headers:
+X-Frontend-Version
+content-length:
+905
+content-type:
+application/json; charset=utf-8
+date:
+Fri, 20 Jun 2025 18:35:10 GMT
+etag:
+W/"389-/IRGW0f1Ewx9SSYABDeQYI+Qzx8"
+server:
+nginx/1.18.0 (Ubuntu)
+x-frontend-version:
+2.5.0
+x-robots-tag:
+noindex, nofollow, nosnippet, noarchive
+accept:
+application/json, text/plain, */*
+accept-encoding:
+gzip, deflate, br, zstd
+accept-language:
+ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7
+authorization:
+2181e986-0b74-460f-bd1a-81f7062ec9cb
+connection:
+keep-alive
+host:
+v2api.musicalligator.com
+if-none-match:
+W/"389-/IRGW0f1Ewx9SSYABDeQYI+Qzx8"
+origin:
+https://app.musicalligator.ru
+referer:
+https://app.musicalligator.ru/
+sec-ch-ua:
+"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"
+sec-ch-ua-mobile:
+?0
+sec-ch-ua-platform:
+"Windows"
+sec-fetch-dest:
+empty
+sec-fetch-mode:
+cors
+sec-fetch-site:
+cross-site
+user-agent:
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36
+x-lang:
+RU
+x-requested-with:
+XMLHttpRequest
+
+пример ответа:
+
+{
+    "data": {
+        "data": [
+            {
+                "id": 41657,
+                "name": "Himerkina Bella",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41655,
+                "name": "KAZIOL",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41653,
+                "name": "DZINNINI",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41647,
+                "name": "LiSO4ka",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41631,
+                "name": "РОЗÉ",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41628,
+                "name": "JISUO",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41623,
+                "name": "K-POP SQUAD",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41605,
+                "name": "EBLN",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41602,
+                "name": "8D PARADISE",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41515,
+                "name": "8DVOLUME",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41371,
+                "name": "wiolets",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41344,
+                "name": "DJMVS",
+                "level": "REGULAR",
+                "clientId": 58251
+            },
+            {
+                "id": 41334,
+                "name": "HWAREYOU?",
+                "level": "REGULAR",
+                "clientId": 58251
+            }
+        ],
+        "count": 13
+    },
+    "statusCode": 200
+}

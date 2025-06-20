@@ -6,7 +6,7 @@ releases automatically.
 
 ## Usage
 
-1. Fill in `config.yaml` with your auth token, artist IDs, labels and
+1. Fill in `config.yaml` with your auth token, artist IDs and
    per-artist presets.
 2. Start the web UI:
 
@@ -19,6 +19,6 @@ releases automatically.
 Track metadata is updated via
 `/api/releases/{releaseId}/tracks/{trackId}` which ensures recording year,
 language, composers, lyricists and genre are correctly stored.  The request
-uses `genre: {"genreId": ...}` and arrays of `{id: ...}` objects for
+uses `genre: {"genreId": ...}` and arrays of numeric IDs for
 `composers` and `lyricists`.
 

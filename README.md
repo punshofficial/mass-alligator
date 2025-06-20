@@ -18,5 +18,7 @@ releases automatically.
 
 Track metadata is updated via
 `/api/releases/{releaseId}/tracks/{trackId}` which ensures recording year,
-language, composers, lyricists and genre are correctly stored.
+language, composers, lyricists and genre are correctly stored.  The request
+uses `genre: {"genreId": ...}` and arrays of `{id: ...}` objects for
+`composers` and `lyricists`.
 

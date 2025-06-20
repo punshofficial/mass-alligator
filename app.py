@@ -279,7 +279,7 @@ def upload_release(base, files):
             "lyricists":      preset["lyricists"]
         }
         r5 = session.put(
-            f"https://v2api.musicalligator.com/api/tracks/{track0}",
+            f"https://v2api.musicalligator.com/api/releases/{rid}/tracks/{track0}",
             json=track_meta
         )
         st.write(f"Track metadata updated: {r5.status_code}")

@@ -265,7 +265,7 @@ def upload_release(base, files):
             files={"file": (fa.name, fa, "audio/wav")}
         )
         st.write(f"Audio upload: {r4.status_code}")
-        if r4.status_code != 200:
+        if r4.status_code not in (200, 201):
             st.error("Audio upload failed")
             return
 

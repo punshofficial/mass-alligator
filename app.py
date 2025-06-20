@@ -285,6 +285,7 @@ def upload_release(base, files):
         st.write(f"Track metadata updated: {r5.status_code}")
 
     st.success(f"Release {rid} done!")
+    st.markdown(f"[Открыть релиз](https://app.musicalligator.ru/releases/{rid})")
 
 if st.button("Run upload", key="upload_button"):
     for base, files in groups.items():

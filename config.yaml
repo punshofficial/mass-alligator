@@ -15,8 +15,8 @@ artists:
   "\u0420\u041E\u0417\xC9": 86338
 auth_token: 2181e986-0b74-460f-bd1a-81f7062ec9cb
 default:
-  genre_id: 0
-  label_id: 0
+  genre_id: 196
+  label_id: 86276
   platform_ids: []
 labels:
   8D PARADISE: 41602

@@ -156,13 +156,29 @@ for artist_name in config["artists"]:
         "Lyricist IDs (comma)", ",".join(str(x) for x in default.get("lyricists", [])),
         key=f"lyric_{artist_name}"
     )
+    p_explicit = exp.checkbox(
+        "Explicit", value=default.get("explicit", False), key=f"ex_{artist_name}"
+    )
+    track_def = default.get("track_date")
+    if track_def:
+        try:
+            track_val = date.fromisoformat(track_def)
+        except Exception:
+            track_val = date.today()
+    else:
+        track_val = date.today()
+    p_tdate = exp.date_input(
+        "Track Date", value=track_val, key=f"tdate_{artist_name}"
+    )
     presets_ui[artist_name] = {
         "label_id":     config["labels"][p_label],
         "genre_id":     p_genre,
         "recording_year": p_year,
         "language_id":  p_lang,
         "composers":    [int(x) for x in comps.split(",") if x.strip().isdigit()],
-        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()]
+        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()],
+        "explicit":     p_explicit,
+        "track_date":   p_tdate.isoformat()
     }
 config["presets"] = presets_ui
 
@@ -202,12 +218,26 @@ st.header("Parameters")
 release_date = st.date_input("Release Date", date.today())
 orig_date    = st.date_input("Original Release Date", date.today())
 
+def batch_update_tracks(release_id, track_list):
+    st.write("→ Updating track metadata…")
+    for meta in track_list:
+        tid = meta.get("trackId")
+        data = {k: v for k, v in meta.items() if k != "trackId"}
+        r = session.put(
+            f"https://v2api.musicalligator.com/api/releases/{release_id}/tracks/{tid}",
+            json=data
+        )
+        st.write(f"Track {tid} update: {r.status_code}")
+        if r.status_code >= 400:
+            st.write(r.text)
+
 def upload_release(base, files):
     artist, title = (base.split(" - ", 1) + [""])[:2]
     if artist not in config["artists"]:
         st.error(f"Нет artist_id для '{artist}'")
         return
     preset = config["presets"][artist]
+    main_genre = preset.get("genre_id") or config["default"].get("genre_id")
     artist_id = config["artists"][artist]
 
     # 1) Создать черновик
@@ -231,7 +261,7 @@ def upload_release(base, files):
         "status": "DRAFT",
         "client": {"id": artist_id},
         "artists": [{"id": artist_id, "role": "MAIN"}],
-        "genres":     [{"genreId": preset["genre_id"]}],
+        "genres":     [{"genreId": main_genre}],
         "tracks":     [{"trackId": track0}],
         "countries":  [],
         "platformIds": config["default"].get("platform_ids", [])
@@ -269,21 +299,23 @@ def upload_release(base, files):
             return
 
         # 5) Обновить метаданные трека
-        st.write("→ Updating track metadata…")
+        if not preset.get("composers") or not preset.get("lyricists"):
+            st.warning(f"Отсутствуют composers/lyricists для {artist}")
+        st.write("→ Preparing track metadata…")
         track_meta = {
+            "trackId": track0,
             "artist":   artist_id,
             "artists":  [{"id": artist_id, "role": "MAIN"}],
-            "genre":    {"genreId": preset["genre_id"]},
+            "genre":    {"genreId": main_genre},
             "recordingYear":  preset["recording_year"],
             "language":       preset["language_id"],
             "composers":      preset["composers"],
-            "lyricists":      preset["lyricists"]
+            "lyricists":      preset["lyricists"],
+            "explicit":       preset.get("explicit", False),
+            "trackDate":      preset.get("track_date")
         }
-        r5 = session.put(
-            f"https://v2api.musicalligator.com/api/releases/{rid}/tracks/{track0}",
-            json=track_meta
-        )
-        st.write(f"Track metadata updated: {r5.status_code}")
+        track_list = [track_meta]
+        batch_update_tracks(rid, track_list)
 
     st.success(f"Release {rid} done!")
     st.markdown(f"[Открыть релиз](https://app.musicalligator.ru/releases/{rid})")

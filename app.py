@@ -149,6 +149,24 @@ for artist_name in config["artists"]:
         value=default.get("language_id", 7),
         step=1, key=f"lang_{artist_name}"
     )
+    p_explicit = exp.checkbox(
+        "Explicit",
+        value=default.get("explicit", False),
+        key=f"explicit_{artist_name}"
+    )
+    td_raw = default.get("track_date")
+    if td_raw:
+        try:
+            td_val = date.fromisoformat(td_raw)
+        except Exception:
+            td_val = date.today()
+    else:
+        td_val = date.today()
+    p_tdate = exp.date_input(
+        "Track Date",
+        value=td_val,
+        key=f"tdate_{artist_name}"
+    )
     comps  = exp.text_input(
         "Composer IDs (comma)", ",".join(str(x) for x in default.get("composers", [])),
         key=f"comp_{artist_name}"
@@ -163,7 +181,9 @@ for artist_name in config["artists"]:
         "recording_year": p_year,
         "language_id":  p_lang,
         "composers":    [int(x) for x in comps.split(",") if x.strip().isdigit()],
-        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()]
+        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()],
+        "explicit":     p_explicit,
+        "track_date":   p_tdate.isoformat()
     }
 config["presets"] = presets_ui
 
@@ -267,6 +287,7 @@ def upload_release(base, files, opts):
     # 2) Обновить базовые метаданные релиза
     track0 = r1.json()["data"]["release"]["tracks"][0]["trackId"]
     track_date = opts.get("track_date", date.today().isoformat())
+    track_list = []
     meta_release = {
         "title": title,
         "releaseDate": track_date,
@@ -281,8 +302,13 @@ def upload_release(base, files, opts):
     }
     if version:
         meta_release["releaseVersion"] = version
-    r2 = session.put(f"https://v2api.musicalligator.com/api/releases/{rid}", json=meta_release)
+    r2 = session.put(
+        f"https://v2api.musicalligator.com/api/releases/{rid}",
+        json=meta_release
+    )
     st.write(f"Metadata updated: {r2.status_code}")
+    if r2.status_code >= 400:
+        st.write(r2.text)
 
     if config["default"].get("platform_ids"):
         r_platforms = session.put(
@@ -290,6 +316,8 @@ def upload_release(base, files, opts):
             json=config["default"]["platform_ids"]
         )
         st.write(f"Platforms set: {r_platforms.status_code}")
+        if r_platforms.status_code >= 400:
+            st.write(r_platforms.text)
 
     # 3) Upload cover
     if "cover" in files:
@@ -299,6 +327,8 @@ def upload_release(base, files, opts):
             files={"file": (files["cover"].name, files["cover"], "image/png")}
         )
         st.write(f"Cover upload: {r3.status_code}")
+        if r3.status_code >= 400:
+            st.write(r3.text)
 
     # 4) Upload audio на правильный endpoint
     if "audio" in files:
@@ -311,6 +341,7 @@ def upload_release(base, files, opts):
         st.write(f"Audio upload: {r4.status_code}")
         if r4.status_code not in (200, 201):
             st.error("Audio upload failed")
+            st.write(r4.text)
             return
 
         # 5) Обновить метаданные трека
@@ -334,12 +365,15 @@ def upload_release(base, files, opts):
             "composers":      preset["composers"],
             "lyricists":      preset["lyricists"],
             "persons":        persons,
-            "explicit":       opts.get("explicit", False),
+            "adult":          opts.get("explicit", False),
             "trackDate":      opts.get("track_date")
         }
         if track_meta["trackVersion"] is None:
             del track_meta["trackVersion"]
-        track_list = [track_meta]
+
+        track_list.append(track_meta)
+
+    if track_list:
         batch_update_tracks(rid, track_list)
 
     st.success(f"Release {rid} done!")

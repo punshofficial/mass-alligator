@@ -37,30 +37,40 @@ presets:
     label_id: 41602
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   8DVOLUME:
     label_id: 41515
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   DJMVS:
     label_id: 41344
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   DZINNINI:
     label_id: 41653
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   EBLN:
     label_id: 41605
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers:
       - 79130
     lyricists:
@@ -70,53 +80,71 @@ presets:
     label_id: 41334
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   Himerkina Bella:
     label_id: 41657
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   JISUO:
     label_id: 41628
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   K-POP SQUAD:
     label_id: 41623
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   KAZIOL:
     label_id: 41655
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   LiSO4ka:
     label_id: 41647
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   Tommy Pdras:
     label_id: 41657
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   wiolets:
     label_id: 41371
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []
   "\u0420\u041E\u0417\xC9":
     label_id: 41631
     language_id: 7
     recording_year: 2025
+    explicit: false
+    track_date: 2025-06-24
     composers: []
     lyricists: []

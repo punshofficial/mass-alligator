@@ -231,7 +231,6 @@ def upload_release(base, files):
         "status": "DRAFT",
         "client": {"id": artist_id},
         "artists": [{"id": artist_id, "role": "MAIN"}],
-        "labelId":    preset["label_id"],
         "genres":     [{"genreId": preset["genre_id"]}],
         "tracks":     [{"trackId": track0}],
         "countries":  [],
@@ -272,14 +271,16 @@ def upload_release(base, files):
         # 5) Обновить метаданные трека
         st.write("→ Updating track metadata…")
         track_meta = {
-            "genres":         [preset["genre_id"]],
+            "artist":   artist_id,
+            "artists":  [{"id": artist_id, "role": "MAIN"}],
+            "genre":    {"genreId": preset["genre_id"]},
             "recordingYear":  preset["recording_year"],
             "language":       preset["language_id"],
             "composers":      preset["composers"],
             "lyricists":      preset["lyricists"]
         }
         r5 = session.put(
-            f"https://v2api.musicalligator.com/api/tracks/{track0}",
+            f"https://v2api.musicalligator.com/api/releases/{rid}/tracks/{track0}",
             json=track_meta
         )
         st.write(f"Track metadata updated: {r5.status_code}")

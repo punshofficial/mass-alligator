@@ -224,9 +224,6 @@ for base, files in groups.items():
         p_date = st.date_input("Track Date", value=td_date, key=f"td_{base}")
     track_settings[base] = {"explicit": p_exp, "track_date": p_date.isoformat()}
 
-st.header("Parameters")
-release_date = st.date_input("Release Date", date.today())
-orig_date    = st.date_input("Original Release Date", date.today())
 
 def batch_update_tracks(release_id, track_list):
     st.write("→ Updating track metadata…")
@@ -269,10 +266,11 @@ def upload_release(base, files, opts):
 
     # 2) Обновить базовые метаданные релиза
     track0 = r1.json()["data"]["release"]["tracks"][0]["trackId"]
+    track_date = opts.get("track_date", date.today().isoformat())
     meta_release = {
         "title": title,
-        "releaseDate": release_date.isoformat(),
-        "originalReleaseDate": orig_date.isoformat(),
+        "releaseDate": track_date,
+        "originalReleaseDate": track_date,
         "status": "DRAFT",
         "client": {"id": artist_id},
         "artists": [{"id": artist_id, "role": "MAIN"}],

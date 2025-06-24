@@ -18,7 +18,6 @@ def load_config():
             return yaml.safe_load(f) or {}
     return {
         "auth_token": "",
-        "default": {"label_id": 0, "genre_id": 0, "platform_ids": []},
         "artists": {},
         "labels": {},
         "presets": {}
@@ -42,21 +41,6 @@ config["auth_token"] = st.sidebar.text_input(
     key="token_input"
 ).strip()
 
-st.sidebar.markdown("### Default settings")
-defaults = config.get("default", {})
-label_id = st.sidebar.number_input(
-    "Default Label ID", defaults.get("label_id", 0), step=1, key="default_label"
-)
-genre_id = st.sidebar.number_input(
-    "Default Genre ID", defaults.get("genre_id", 0), step=1, key="default_genre"
-)
-platforms_raw = st.sidebar.text_input(
-    "Default Platform IDs (comma)",
-    ",".join(str(x) for x in defaults.get("platform_ids", [])),
-    key="default_platforms"
-)
-platform_ids = [int(x) for x in platforms_raw.split(",") if x.strip().isdigit()]
-config["default"] = {"label_id": label_id, "genre_id": genre_id, "platform_ids": platform_ids}
 
 # Prepare HTTP session
 session = requests.Session()
@@ -128,13 +112,13 @@ for artist_name in config["artists"]:
     # Label
     names = list(config["labels"].keys())
     ids   = list(config["labels"].values())
-    sel   = default.get("label_id", label_id)
+    sel   = default.get("label_id")
     idx   = ids.index(sel) if sel in ids else 0
     p_label = exp.selectbox("Label", names, index=idx, key=f"lbl_{artist_name}")
     # Genre
     p_genre = exp.number_input(
         "Main Genre ID",
-        value=default.get("genre_id", genre_id),
+        value=default.get("genre_id", 0),
         step=1,
         key=f"genre_{artist_name}"
     )
@@ -148,24 +132,6 @@ for artist_name in config["artists"]:
         "Language ID",
         value=default.get("language_id", 7),
         step=1, key=f"lang_{artist_name}"
-    )
-    p_explicit = exp.checkbox(
-        "Explicit",
-        value=default.get("explicit", False),
-        key=f"explicit_{artist_name}"
-    )
-    td_raw = default.get("track_date")
-    if td_raw:
-        try:
-            td_val = date.fromisoformat(td_raw)
-        except Exception:
-            td_val = date.today()
-    else:
-        td_val = date.today()
-    p_tdate = exp.date_input(
-        "Track Date",
-        value=td_val,
-        key=f"tdate_{artist_name}"
     )
     comps  = exp.text_input(
         "Composer IDs (comma)", ",".join(str(x) for x in default.get("composers", [])),
@@ -181,9 +147,7 @@ for artist_name in config["artists"]:
         "recording_year": p_year,
         "language_id":  p_lang,
         "composers":    [int(x) for x in comps.split(",") if x.strip().isdigit()],
-        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()],
-        "explicit":     p_explicit,
-        "track_date":   p_tdate.isoformat()
+        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()]
     }
 config["presets"] = presets_ui
 
@@ -229,19 +193,9 @@ st.table(found)
 track_settings = {}
 for base, files in groups.items():
     artist = base.split(" - ",1)[0] if " - " in base else base
-    preset = config.get("presets", {}).get(artist, {})
     with st.expander(base, expanded=False):
-        ex_val = preset.get("explicit", False)
-        p_exp = st.checkbox("Explicit", value=ex_val, key=f"ex_{base}")
-        td_def = preset.get("track_date")
-        if td_def:
-            try:
-                td_date = date.fromisoformat(td_def)
-            except Exception:
-                td_date = date.today()
-        else:
-            td_date = date.today()
-        p_date = st.date_input("Track Date", value=td_date, key=f"td_{base}")
+        p_exp = st.checkbox("Explicit", value=False, key=f"ex_{base}")
+        p_date = st.date_input("Track Date", value=date.today(), key=f"td_{base}")
     track_settings[base] = {"explicit": p_exp, "track_date": p_date.isoformat()}
 
 
@@ -269,7 +223,7 @@ def upload_release(base, files, opts):
         st.error(f"Нет artist_id для '{artist}'")
         return
     preset = config["presets"][artist]
-    main_genre = preset.get("genre_id") or config["default"].get("genre_id")
+    main_genre = preset.get("genre_id")
     artist_id = config["artists"][artist]
 
     # 1) Создать черновик
@@ -297,8 +251,7 @@ def upload_release(base, files, opts):
         "artists": [{"id": artist_id, "role": "MAIN"}],
         "genre":      {"genreId": main_genre},
         "tracks":     [{"trackId": track0}],
-        "countries":  [],
-        "platformIds": config["default"].get("platform_ids", [])
+        "countries":  []
     }
     if version:
         meta_release["releaseVersion"] = version
@@ -310,14 +263,6 @@ def upload_release(base, files, opts):
     if r2.status_code >= 400:
         st.write(r2.text)
 
-    if config["default"].get("platform_ids"):
-        r_platforms = session.put(
-            f"https://v2api.musicalligator.com/api/releases/{rid}/platforms",
-            json=config["default"]["platform_ids"]
-        )
-        st.write(f"Platforms set: {r_platforms.status_code}")
-        if r_platforms.status_code >= 400:
-            st.write(r_platforms.text)
 
     # 3) Upload cover
     if "cover" in files:

@@ -5,6 +5,7 @@ import requests
 import streamlit as st
 from pathlib import Path
 from datetime import date
+import re
 
 # —————————————
 # Config load & save
@@ -233,6 +234,11 @@ def batch_update_tracks(release_id, track_list):
 
 def upload_release(base, files):
     artist, title = (base.split(" - ", 1) + [""])[:2]
+    version = ""
+    m = re.search(r"\(([^()]*)\)\s*$", title)
+    if m:
+        version = m.group(1).strip()
+        title = title[:m.start()].rstrip()
     if artist not in config["artists"]:
         st.error(f"Нет artist_id для '{artist}'")
         return
@@ -266,6 +272,8 @@ def upload_release(base, files):
         "countries":  [],
         "platformIds": config["default"].get("platform_ids", [])
     }
+    if version:
+        meta_release["releaseVersion"] = version
     r2 = session.put(f"https://v2api.musicalligator.com/api/releases/{rid}", json=meta_release)
     st.write(f"Metadata updated: {r2.status_code}")
 
@@ -302,18 +310,28 @@ def upload_release(base, files):
         if not preset.get("composers") or not preset.get("lyricists"):
             st.warning(f"Отсутствуют composers/lyricists для {artist}")
         st.write("→ Preparing track metadata…")
+        persons = [
+            {"id": c, "role": "MUSIC_AUTHOR"} for c in preset["composers"]
+        ] + [
+            {"id": l, "role": "LYRICS_AUTHOR"} for l in preset["lyricists"]
+        ]
         track_meta = {
             "trackId": track0,
             "artist":   artist_id,
             "artists":  [{"id": artist_id, "role": "MAIN"}],
+            "title":    title,
+            "trackVersion": version if version else None,
             "genre":    {"genreId": main_genre},
             "recordingYear":  preset["recording_year"],
             "language":       preset["language_id"],
             "composers":      preset["composers"],
             "lyricists":      preset["lyricists"],
+            "persons":        persons,
             "explicit":       preset.get("explicit", False),
             "trackDate":      preset.get("track_date")
         }
+        if track_meta["trackVersion"] is None:
+            del track_meta["trackVersion"]
         track_list = [track_meta]
         batch_update_tracks(rid, track_list)
 

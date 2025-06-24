@@ -157,29 +157,13 @@ for artist_name in config["artists"]:
         "Lyricist IDs (comma)", ",".join(str(x) for x in default.get("lyricists", [])),
         key=f"lyric_{artist_name}"
     )
-    p_explicit = exp.checkbox(
-        "Explicit", value=default.get("explicit", False), key=f"ex_{artist_name}"
-    )
-    track_def = default.get("track_date")
-    if track_def:
-        try:
-            track_val = date.fromisoformat(track_def)
-        except Exception:
-            track_val = date.today()
-    else:
-        track_val = date.today()
-    p_tdate = exp.date_input(
-        "Track Date", value=track_val, key=f"tdate_{artist_name}"
-    )
     presets_ui[artist_name] = {
         "label_id":     config["labels"][p_label],
         "genre_id":     p_genre,
         "recording_year": p_year,
         "language_id":  p_lang,
         "composers":    [int(x) for x in comps.split(",") if x.strip().isdigit()],
-        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()],
-        "explicit":     p_explicit,
-        "track_date":   p_tdate.isoformat()
+        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()]
     }
 config["presets"] = presets_ui
 
@@ -204,16 +188,41 @@ for f in wavs:
     groups.setdefault(Path(f.name).stem, {})["audio"] = f
 
 st.write("Found releases:")
-st.table([
-    {
+
+found = []
+for base, files in groups.items():
+    title_part = base.split(" - ",1)[1] if " - " in base else base
+    ver = ""
+    m = re.search(r"\(([^()]*)\)\s*$", title_part)
+    if m:
+        ver = m.group(1).strip()
+    found.append({
         "Base": base,
         "Artist": base.split(" - ",1)[0] if " - " in base else "",
-        "Title":  base.split(" - ",1)[1] if " - " in base else base,
-        "Cover":  "✅" if "cover" in files else "⚠️",
-        "Audio":  "✅" if "audio" in files else "⚠️"
-    }
-    for base, files in groups.items()
-])
+        "Title": title_part,
+        "Version": ver,
+        "Cover": "✅" if "cover" in files else "⚠️",
+        "Audio": "✅" if "audio" in files else "⚠️"
+    })
+st.table(found)
+
+track_settings = {}
+for base, files in groups.items():
+    artist = base.split(" - ",1)[0] if " - " in base else base
+    preset = config.get("presets", {}).get(artist, {})
+    with st.expander(base, expanded=False):
+        ex_val = preset.get("explicit", False)
+        p_exp = st.checkbox("Explicit", value=ex_val, key=f"ex_{base}")
+        td_def = preset.get("track_date")
+        if td_def:
+            try:
+                td_date = date.fromisoformat(td_def)
+            except Exception:
+                td_date = date.today()
+        else:
+            td_date = date.today()
+        p_date = st.date_input("Track Date", value=td_date, key=f"td_{base}")
+    track_settings[base] = {"explicit": p_exp, "track_date": p_date.isoformat()}
 
 st.header("Parameters")
 release_date = st.date_input("Release Date", date.today())
@@ -232,7 +241,7 @@ def batch_update_tracks(release_id, track_list):
         if r.status_code >= 400:
             st.write(r.text)
 
-def upload_release(base, files):
+def upload_release(base, files, opts):
     artist, title = (base.split(" - ", 1) + [""])[:2]
     version = ""
     m = re.search(r"\(([^()]*)\)\s*$", title)
@@ -267,7 +276,7 @@ def upload_release(base, files):
         "status": "DRAFT",
         "client": {"id": artist_id},
         "artists": [{"id": artist_id, "role": "MAIN"}],
-        "genres":     [{"genreId": main_genre}],
+        "genre":      {"genreId": main_genre},
         "tracks":     [{"trackId": track0}],
         "countries":  [],
         "platformIds": config["default"].get("platform_ids", [])
@@ -327,8 +336,8 @@ def upload_release(base, files):
             "composers":      preset["composers"],
             "lyricists":      preset["lyricists"],
             "persons":        persons,
-            "explicit":       preset.get("explicit", False),
-            "trackDate":      preset.get("track_date")
+            "explicit":       opts.get("explicit", False),
+            "trackDate":      opts.get("track_date")
         }
         if track_meta["trackVersion"] is None:
             del track_meta["trackVersion"]
@@ -340,5 +349,6 @@ def upload_release(base, files):
 
 if st.button("Run upload", key="upload_button"):
     for base, files in groups.items():
-        upload_release(base, files)
+        opts = track_settings.get(base, {})
+        upload_release(base, files, opts)
     st.balloons()

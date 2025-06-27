@@ -21,7 +21,8 @@ def load_config():
         "auth_token": "",
         "artists": {},
         "labels": {},
-        "presets": {}
+        "presets": {},
+        "streaming_platforms": [195, 196, 197]
     }
 
 def save_config(cfg):
@@ -94,6 +95,17 @@ config["artists"] = {name: artist_map[name] for name in selected_artists if name
 config.setdefault("labels", {})
 for name, lid in label_map.items():
     config["labels"].setdefault(name, lid)
+
+config.setdefault("streaming_platforms", [195, 196, 197])
+platforms_text = st.sidebar.text_input(
+    "Platforms (comma separated)",
+    ",".join(str(p) for p in config.get("streaming_platforms", [])),
+    key="platforms_input"
+)
+try:
+    config["streaming_platforms"] = [int(x) for x in platforms_text.split(",") if x.strip()]
+except ValueError:
+    st.sidebar.error("Invalid platform IDs")
 
 # Presets per artist
 st.sidebar.markdown("### Presets (per-artist)")
@@ -243,6 +255,18 @@ def set_release_label(release_id: int, label_id: int, year: int, sess):
     if r.status_code >= 400:
         st.write(r.text)
 
+
+def set_streaming_platforms(release_id: int, platforms: list[int], sess):
+    data = {"streamingPlatforms": platforms}
+    st.write("→ Setting platforms…")
+    r = sess.put(
+        f"https://v2api.musicalligator.com/api/releases/{release_id}",
+        json=data,
+    )
+    st.write(f"Platforms update: {r.status_code}")
+    if r.status_code >= 400:
+        st.write(r.text)
+
 def upload_release(base, files, opts):
     local = requests.Session()
     local.headers.update(session.headers)
@@ -359,6 +383,12 @@ def upload_release(base, files, opts):
 
     if track_list:
         batch_update_tracks(rid, track_list, local)
+
+    set_streaming_platforms(
+        rid,
+        config.get("streaming_platforms", [195, 196, 197]),
+        local,
+    )
 
     st.success(f"Release {rid} done!")
     st.markdown(f"[Открыть релиз](https://app.musicalligator.ru/releases/{rid})")

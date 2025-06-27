@@ -6,6 +6,11 @@ import streamlit as st
 from pathlib import Path
 from datetime import date
 from concurrent.futures import ThreadPoolExecutor, as_completed
+try:
+    from streamlit.runtime.scriptrunner import add_script_run_ctx
+except Exception:  # streamlit<1.25
+    add_script_run_ctx = None
+import threading
 import re
 
 # —————————————
@@ -30,6 +35,12 @@ def save_config(cfg):
         yaml.safe_dump(cfg, f)
 
 config = load_config()
+
+# Helper to attach Streamlit context to worker threads
+def run_with_ctx(fn, *args, **kwargs):
+    if add_script_run_ctx:
+        add_script_run_ctx(threading.current_thread())
+    return fn(*args, **kwargs)
 
 # —————————————
 # Sidebar: Config UI
@@ -393,7 +404,7 @@ def upload_release(base, files, opts):
     st.success(f"Release {rid} done!")
     st.markdown(f"[Открыть релиз](https://app.musicalligator.ru/releases/{rid})")
 
-if st.button("Run upload", key="upload_button"):
+def run_all_uploads():
     total = len(groups)
     progress = st.progress(0.0)
     done = 0
@@ -401,8 +412,20 @@ if st.button("Run upload", key="upload_button"):
     with ThreadPoolExecutor(max_workers=max_workers) as exe:
         for base, files in groups.items():
             opts = track_settings.get(base, {})
-            futures.append(exe.submit(upload_release, base, files, opts))
+            futures.append(exe.submit(run_with_ctx, upload_release, base, files, opts))
         for _ in as_completed(futures):
             done += 1
             progress.progress(done / total)
     st.balloons()
+    st.session_state.upload_done = True
+
+if "upload_done" not in st.session_state:
+    st.session_state.upload_done = False
+
+if not st.session_state.upload_done:
+    if st.button("Run upload", key="upload_button"):
+        run_all_uploads()
+else:
+    if st.button("Upload more", key="upload_more"):
+        st.session_state.upload_done = False
+        st.experimental_rerun()

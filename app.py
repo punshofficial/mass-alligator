@@ -5,6 +5,7 @@ import requests
 import streamlit as st
 from pathlib import Path
 from datetime import date
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 
 # —————————————
@@ -52,6 +53,22 @@ session.headers.update({
     "Origin": "https://app.musicalligator.ru",
     "Referer": "https://app.musicalligator.ru/"
 })
+
+
+@st.cache_data(show_spinner=False)
+def search_persons(query: str):
+    """Return mapping of name -> id for persons search."""
+    if not query:
+        return {}
+    try:
+        r = session.get(
+            f"https://v2api.musicalligator.com/api/artists?name={query}"
+        )
+        if r.status_code == 200:
+            return {p["name"]: p["id"] for p in r.json().get("data", [])}
+    except Exception:
+        pass
+    return {}
 
 # Fetch artists & labels
 try:
@@ -133,27 +150,35 @@ for artist_name in config["artists"]:
         value=default.get("language_id", 7),
         step=1, key=f"lang_{artist_name}"
     )
-    comps  = exp.text_input(
-        "Composer IDs (comma)", ",".join(str(x) for x in default.get("composers", [])),
-        key=f"comp_{artist_name}"
+    comp_q = exp.text_input("Search composer", key=f"compq_{artist_name}")
+    comp_opts = search_persons(comp_q)
+    comp_names = list(comp_opts.keys())
+    comp_sel = exp.multiselect(
+        "Composers", comp_names, key=f"comp_{artist_name}"
     )
-    lyrics = exp.text_input(
-        "Lyricist IDs (comma)", ",".join(str(x) for x in default.get("lyricists", [])),
-        key=f"lyric_{artist_name}"
+    lyric_q = exp.text_input("Search lyricist", key=f"lyricq_{artist_name}")
+    lyric_opts = search_persons(lyric_q)
+    lyric_names = list(lyric_opts.keys())
+    lyric_sel = exp.multiselect(
+        "Lyricists", lyric_names, key=f"lyric_{artist_name}"
     )
     presets_ui[artist_name] = {
         "label_id":     config["labels"][p_label],
         "genre_id":     p_genre,
         "recording_year": p_year,
         "language_id":  p_lang,
-        "composers":    [int(x) for x in comps.split(",") if x.strip().isdigit()],
-        "lyricists":    [int(x) for x in lyrics.split(",") if x.strip().isdigit()]
+        "composers":    [comp_opts[n] for n in comp_sel],
+        "lyricists":    [lyric_opts[n] for n in lyric_sel]
     }
 config["presets"] = presets_ui
 
 if st.sidebar.button("Save config", key="save_config"):
     save_config(config)
     st.sidebar.success("Config saved")
+
+max_workers = st.sidebar.number_input(
+    "Parallel uploads", min_value=1, max_value=5, value=1, step=1, key="workers"
+)
 
 # —————————————
 # Main UI
@@ -199,12 +224,12 @@ for base, files in groups.items():
     track_settings[base] = {"explicit": p_exp, "track_date": p_date.isoformat()}
 
 
-def batch_update_tracks(release_id, track_list):
+def batch_update_tracks(release_id, track_list, sess):
     st.write("→ Updating track metadata…")
     for meta in track_list:
         tid = meta.get("trackId")
         data = {k: v for k, v in meta.items() if k != "trackId"}
-        r = session.put(
+        r = sess.put(
             f"https://v2api.musicalligator.com/api/releases/{release_id}/tracks/{tid}",
             json=data
         )
@@ -220,7 +245,7 @@ def get_label_name(label_id: int) -> str:
     return ""
 
 
-def set_release_label(release_id: int, label_id: int, year: int):
+def set_release_label(release_id: int, label_id: int, year: int, sess):
     label = get_label_name(label_id)
     data = {
         "labelId": label_id,
@@ -230,7 +255,7 @@ def set_release_label(release_id: int, label_id: int, year: int):
         "plineYear": str(year),
     }
     st.write("→ Setting label…")
-    r = session.put(
+    r = sess.put(
         f"https://v2api.musicalligator.com/api/releases/{release_id}",
         json=data,
     )
@@ -239,6 +264,8 @@ def set_release_label(release_id: int, label_id: int, year: int):
         st.write(r.text)
 
 def upload_release(base, files, opts):
+    local = requests.Session()
+    local.headers.update(session.headers)
     artist, title = (base.split(" - ", 1) + [""])[:2]
     version = ""
     m = re.search(r"\(([^()]*)\)\s*$", title)
@@ -254,7 +281,7 @@ def upload_release(base, files, opts):
 
     # 1) Создать черновик
     st.write(f"→ Creating draft for '{title}'…")
-    r1 = session.post(
+    r1 = local.post(
         "https://v2api.musicalligator.com/api/releases/create",
         json={"releaseType":"SINGLE"}
     )
@@ -281,7 +308,7 @@ def upload_release(base, files, opts):
     }
     if version:
         meta_release["releaseVersion"] = version
-    r2 = session.put(
+    r2 = local.put(
         f"https://v2api.musicalligator.com/api/releases/{rid}",
         json=meta_release
     )
@@ -293,13 +320,13 @@ def upload_release(base, files, opts):
     label_id = preset.get("label_id")
     if label_id:
         year = date.fromisoformat(track_date).year
-        set_release_label(rid, label_id, year)
+        set_release_label(rid, label_id, year, local)
 
 
     # 3) Upload cover
     if "cover" in files:
         st.write("→ Uploading cover…")
-        r3 = session.post(
+        r3 = local.post(
             f"https://v2api.musicalligator.com/api/releases/{rid}/cover",
             files={"file": (files["cover"].name, files["cover"], "image/png")}
         )
@@ -311,7 +338,7 @@ def upload_release(base, files, opts):
     if "audio" in files:
         st.write("→ Uploading audio…")
         fa = files["audio"]
-        r4 = session.post(
+        r4 = local.post(
             f"https://v2api.musicalligator.com/api/releases/{rid}/tracks/{track0}/upload",
             files={"file": (fa.name, fa, "audio/wav")}
         )
@@ -351,13 +378,21 @@ def upload_release(base, files, opts):
         track_list.append(track_meta)
 
     if track_list:
-        batch_update_tracks(rid, track_list)
+        batch_update_tracks(rid, track_list, local)
 
     st.success(f"Release {rid} done!")
     st.markdown(f"[Открыть релиз](https://app.musicalligator.ru/releases/{rid})")
 
 if st.button("Run upload", key="upload_button"):
-    for base, files in groups.items():
-        opts = track_settings.get(base, {})
-        upload_release(base, files, opts)
+    total = len(groups)
+    progress = st.progress(0.0)
+    done = 0
+    futures = []
+    with ThreadPoolExecutor(max_workers=max_workers) as exe:
+        for base, files in groups.items():
+            opts = track_settings.get(base, {})
+            futures.append(exe.submit(upload_release, base, files, opts))
+        for _ in as_completed(futures):
+            done += 1
+            progress.progress(done / total)
     st.balloons()

@@ -6,6 +6,11 @@ import streamlit as st
 from pathlib import Path
 from datetime import date
 from concurrent.futures import ThreadPoolExecutor, as_completed
+try:
+    from streamlit.runtime.scriptrunner import add_script_run_ctx
+except Exception:  # streamlit<1.25
+    add_script_run_ctx = None
+import threading
 import re
 
 # —————————————
@@ -21,7 +26,8 @@ def load_config():
         "auth_token": "",
         "artists": {},
         "labels": {},
-        "presets": {}
+        "presets": {},
+        "streaming_platforms": [195, 196, 197]
     }
 
 def save_config(cfg):
@@ -29,6 +35,12 @@ def save_config(cfg):
         yaml.safe_dump(cfg, f)
 
 config = load_config()
+
+# Helper to attach Streamlit context to worker threads
+def run_with_ctx(fn, *args, **kwargs):
+    if add_script_run_ctx:
+        add_script_run_ctx(threading.current_thread())
+    return fn(*args, **kwargs)
 
 # —————————————
 # Sidebar: Config UI
@@ -94,6 +106,17 @@ config["artists"] = {name: artist_map[name] for name in selected_artists if name
 config.setdefault("labels", {})
 for name, lid in label_map.items():
     config["labels"].setdefault(name, lid)
+
+config.setdefault("streaming_platforms", [195, 196, 197])
+platforms_text = st.sidebar.text_input(
+    "Platforms (comma separated)",
+    ",".join(str(p) for p in config.get("streaming_platforms", [])),
+    key="platforms_input"
+)
+try:
+    config["streaming_platforms"] = [int(x) for x in platforms_text.split(",") if x.strip()]
+except ValueError:
+    st.sidebar.error("Invalid platform IDs")
 
 # Presets per artist
 st.sidebar.markdown("### Presets (per-artist)")
@@ -243,6 +266,18 @@ def set_release_label(release_id: int, label_id: int, year: int, sess):
     if r.status_code >= 400:
         st.write(r.text)
 
+
+def set_streaming_platforms(release_id: int, platforms: list[int], sess):
+    data = {"streamingPlatforms": platforms}
+    st.write("→ Setting platforms…")
+    r = sess.put(
+        f"https://v2api.musicalligator.com/api/releases/{release_id}",
+        json=data,
+    )
+    st.write(f"Platforms update: {r.status_code}")
+    if r.status_code >= 400:
+        st.write(r.text)
+
 def upload_release(base, files, opts):
     local = requests.Session()
     local.headers.update(session.headers)
@@ -360,10 +395,16 @@ def upload_release(base, files, opts):
     if track_list:
         batch_update_tracks(rid, track_list, local)
 
+    set_streaming_platforms(
+        rid,
+        config.get("streaming_platforms", [195, 196, 197]),
+        local,
+    )
+
     st.success(f"Release {rid} done!")
     st.markdown(f"[Открыть релиз](https://app.musicalligator.ru/releases/{rid})")
 
-if st.button("Run upload", key="upload_button"):
+def run_all_uploads():
     total = len(groups)
     progress = st.progress(0.0)
     done = 0
@@ -371,8 +412,20 @@ if st.button("Run upload", key="upload_button"):
     with ThreadPoolExecutor(max_workers=max_workers) as exe:
         for base, files in groups.items():
             opts = track_settings.get(base, {})
-            futures.append(exe.submit(upload_release, base, files, opts))
+            futures.append(exe.submit(run_with_ctx, upload_release, base, files, opts))
         for _ in as_completed(futures):
             done += 1
             progress.progress(done / total)
     st.balloons()
+    st.session_state.upload_done = True
+
+if "upload_done" not in st.session_state:
+    st.session_state.upload_done = False
+
+if not st.session_state.upload_done:
+    if st.button("Run upload", key="upload_button"):
+        run_all_uploads()
+else:
+    if st.button("Upload more", key="upload_more"):
+        st.session_state.upload_done = False
+        st.experimental_rerun()

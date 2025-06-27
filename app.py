@@ -42,6 +42,10 @@ config["auth_token"] = st.sidebar.text_input(
     key="token_input"
 ).strip()
 
+if config["auth_token"] and not CONFIG_PATH.exists():
+    save_config(config)
+    st.sidebar.success("Config created")
+
 
 # Prepare HTTP session
 session = requests.Session()
@@ -56,14 +60,10 @@ session.headers.update({
 
 
 @st.cache_data(show_spinner=False)
-def search_persons(query: str):
-    """Return mapping of name -> id for persons search."""
-    if not query:
-        return {}
+def load_persons():
+    """Return mapping of name -> id for known persons."""
     try:
-        r = session.get(
-            f"https://v2api.musicalligator.com/api/artists?name={query}"
-        )
+        r = session.get("https://v2api.musicalligator.com/api/persons?name=")
         if r.status_code == 200:
             return {p["name"]: p["id"] for p in r.json().get("data", [])}
     except Exception:
@@ -84,41 +84,16 @@ try:
 except:
     label_map = {}
 
-# Artist mappings
-st.sidebar.markdown("### Artist mappings")
 config.setdefault("artists", {})
-for n, i in artist_map.items():
-    config["artists"].setdefault(n, i)
-artists_raw = st.sidebar.text_area(
-    "Artists (Name:id per line)",
-    "\n".join(f"{n}:{i}" for n, i in config["artists"].items()),
-    height=120, key="artists_text"
+selected_artists = st.sidebar.multiselect(
+    "Artists", list(artist_map.keys()),
+    default=list(config["artists"].keys()), key="artist_select"
 )
-new_artists = {}
-for line in artists_raw.splitlines():
-    if ":" in line:
-        n, v = line.split(":", 1)
-        if v.strip().isdigit():
-            new_artists[n.strip()] = int(v.strip())
-config["artists"] = new_artists
+config["artists"] = {name: artist_map[name] for name in selected_artists if name in artist_map}
 
-# Label mappings
-st.sidebar.markdown("### Label mappings")
 config.setdefault("labels", {})
-for n, i in label_map.items():
-    config["labels"].setdefault(n, i)
-labels_raw = st.sidebar.text_area(
-    "Labels (Name:id per line)",
-    "\n".join(f"{n}:{i}" for n, i in config["labels"].items()),
-    height=120, key="labels_text"
-)
-new_labels = {}
-for line in labels_raw.splitlines():
-    if ":" in line:
-        n, v = line.split(":", 1)
-        if v.strip().isdigit():
-            new_labels[n.strip()] = int(v.strip())
-config["labels"] = new_labels
+for name, lid in label_map.items():
+    config["labels"].setdefault(name, lid)
 
 # Presets per artist
 st.sidebar.markdown("### Presets (per-artist)")
@@ -150,25 +125,29 @@ for artist_name in config["artists"]:
         value=default.get("language_id", 7),
         step=1, key=f"lang_{artist_name}"
     )
-    comp_q = exp.text_input("Search composer", key=f"compq_{artist_name}")
-    comp_opts = search_persons(comp_q)
-    comp_names = list(comp_opts.keys())
+    persons = load_persons()
+    person_names = list(persons.keys())
+    comp_default = [
+        next((n for n, pid in persons.items() if pid == cid), str(cid))
+        for cid in default.get("composers", [])
+    ]
+    lyric_default = [
+        next((n for n, pid in persons.items() if pid == lid), str(lid))
+        for lid in default.get("lyricists", [])
+    ]
     comp_sel = exp.multiselect(
-        "Composers", comp_names, key=f"comp_{artist_name}"
+        "Composers", person_names, default=comp_default, key=f"comp_{artist_name}"
     )
-    lyric_q = exp.text_input("Search lyricist", key=f"lyricq_{artist_name}")
-    lyric_opts = search_persons(lyric_q)
-    lyric_names = list(lyric_opts.keys())
     lyric_sel = exp.multiselect(
-        "Lyricists", lyric_names, key=f"lyric_{artist_name}"
+        "Lyricists", person_names, default=lyric_default, key=f"lyric_{artist_name}"
     )
     presets_ui[artist_name] = {
         "label_id":     config["labels"][p_label],
         "genre_id":     p_genre,
         "recording_year": p_year,
         "language_id":  p_lang,
-        "composers":    [comp_opts[n] for n in comp_sel],
-        "lyricists":    [lyric_opts[n] for n in lyric_sel]
+        "composers":    [persons[n] for n in comp_sel if n in persons],
+        "lyricists":    [persons[n] for n in lyric_sel if n in persons]
     }
 config["presets"] = presets_ui
 

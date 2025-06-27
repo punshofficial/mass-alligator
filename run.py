@@ -35,7 +35,16 @@ CONFIG_PATH = BASE_DIR / "config.yaml"
 APP_PATH = RESOURCE_DIR / "app.py"
 ICON_PATH = RESOURCE_DIR / "application attributes" / "MASS-ALLIGATOR-ICON.png"
 
+SERVER_FLAG = "--server"
+
 server_proc = None
+
+if SERVER_FLAG in sys.argv:
+    os.environ.setdefault("STREAMLIT_SERVER_HEADLESS", "true")
+    from streamlit.web import cli as stcli
+    sys.argv = ["streamlit", "run", str(APP_PATH), "--server.headless", "true"]
+    stcli.main()
+    sys.exit()
 
 
 def load_config():
@@ -54,9 +63,8 @@ def ensure_config():
 def start_server():
     global server_proc
     if server_proc is None:
-        server_proc = subprocess.Popen([
-            sys.executable, "-m", "streamlit", "run", str(APP_PATH)
-        ])
+        cmd = [sys.executable, sys.argv[0], SERVER_FLAG]
+        server_proc = subprocess.Popen(cmd, cwd=str(BASE_DIR))
         logging.info("Server started")
 
 
@@ -64,7 +72,10 @@ def stop_server():
     global server_proc
     if server_proc and server_proc.poll() is None:
         server_proc.terminate()
-        server_proc.wait(timeout=10)
+        try:
+            server_proc.wait(timeout=10)
+        except Exception:
+            server_proc.kill()
         logging.info("Server stopped")
     server_proc = None
 

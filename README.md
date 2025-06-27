@@ -197,18 +197,18 @@ presets:
 
 Для запуска приложения в виде отдельного окна можно собрать исполняемый файл при помощи PyInstaller. Перед сборкой установите зависимости и PyInstaller:
 
-```bash
+```powershell
 pip install -r requirements.txt
 pip install pyinstaller
 ```
 
 Затем выполните:
 
-```bash
-pyinstaller \
-  --noconsole --onefile \
-  --icon="application attributes/MASS-ALLIGATOR-ICON.ico" \
-  --add-data "application attributes/MASS-ALLIGATOR-ICON.png;application attributes" \
+```powershell
+pyinstaller `
+  --noconsole --onefile `
+  --icon="application attributes/MASS-ALLIGATOR-ICON.ico" `
+  --add-data "application attributes/MASS-ALLIGATOR-ICON.png;application attributes" `
   run.py
 ```
 

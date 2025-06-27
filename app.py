@@ -212,6 +212,32 @@ def batch_update_tracks(release_id, track_list):
         if r.status_code >= 400:
             st.write(r.text)
 
+
+def get_label_name(label_id: int) -> str:
+    for name, lid in config.get("labels", {}).items():
+        if lid == label_id:
+            return name
+    return ""
+
+
+def set_release_label(release_id: int, label_id: int, year: int):
+    label = get_label_name(label_id)
+    data = {
+        "labelId": label_id,
+        "clineValue": label,
+        "plineValue": label,
+        "clineYear": str(year),
+        "plineYear": str(year),
+    }
+    st.write("→ Setting label…")
+    r = session.put(
+        f"https://v2api.musicalligator.com/api/releases/{release_id}",
+        json=data,
+    )
+    st.write(f"Label update: {r.status_code}")
+    if r.status_code >= 400:
+        st.write(r.text)
+
 def upload_release(base, files, opts):
     artist, title = (base.split(" - ", 1) + [""])[:2]
     version = ""
@@ -262,6 +288,12 @@ def upload_release(base, files, opts):
     st.write(f"Metadata updated: {r2.status_code}")
     if r2.status_code >= 400:
         st.write(r2.text)
+
+    # 2a) Установить лейбл
+    label_id = preset.get("label_id")
+    if label_id:
+        year = date.fromisoformat(track_date).year
+        set_release_label(rid, label_id, year)
 
 
     # 3) Upload cover

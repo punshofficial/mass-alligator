@@ -1,30 +1,32 @@
 # mass-alligator
 
-Batch uploader for MusicAlligator. The tool reads presets from
-`config.yaml` and uploads pairs of PNG covers and WAV files. A draft release
-is created for each pair and the track metadata is filled in automatically.
+Утилита для пакетной загрузки релизов на сервис MusicAlligator. Программа читает пресеты из `config.yaml` и загружает пары файлов PNG и WAV. Для каждого найденного дуэта создаётся черновик релиза, после чего метаданные трека заполняются автоматически.
 
-## Usage
+## Использование
 
-1. Create `config.yaml` with your authentication token, a mapping of artist
-   names to their IDs and per-artist presets (label, genre and other
-   defaults).
-2. Start the web UI:
+1. Создайте `config.yaml`, указав токен авторизации, сопоставление имён артистов с их ID и пресеты для каждого артиста (лейбл, жанр и другие значения).
+2. Запустите веб-интерфейс:
 
    ```bash
    python -m streamlit run app.py
    ```
 
-3. Drag and drop the WAV and PNG files into the page. Each pair must have the
-   same base name (e.g. `Artist - Title.wav` and `Artist - Title.png`). Review
-   the detected releases, adjust the *Explicit* flag and *Track Date* for each
-   track and start the upload.
+3. Перетащите WAV и PNG файлы на страницу. Названия пар должны совпадать (например, `Artist - Title.wav` и `Artist - Title.png`). Проверьте найденные релизы, при необходимости отметьте *Explicit* и дату трека, затем запустите загрузку.
 
-The application sends requests to the MusicAlligator API to create the draft,
-upload the cover and audio file and finally update the track metadata with
-recording year, language, composers and lyricists.
+Приложение отправляет запросы к API MusicAlligator, чтобы создать черновик, установить лейбл, загрузить обложку и аудио, а затем обновить метаданные трека (год записи, язык, композиторы и авторы текста).
 
-### Configuration file
+### Последовательность работы
+
+Для каждой пары файлов выполняются шаги:
+
+1. **Создание черновика** – `POST /api/releases/create` с полем `releaseType=SINGLE`.
+2. **Обновление основных метаданных** – `PUT /api/releases/{id}` с названием, датами, основным артистом и жанром.
+3. **Установка лейбла** – `PUT /api/releases/{id}` с `labelId`, а также полями `clineValue`, `clineYear`, `plineValue`, `plineYear` из пресета артиста.
+4. **Загрузка обложки** – `POST /api/releases/{id}/cover` с PNG файлом.
+5. **Загрузка аудио** – `POST /api/releases/{id}/tracks/{tid}/upload` с WAV файлом.
+6. **Обновление метаданных трека** – `PUT /api/releases/{id}/tracks/{tid}` с годом записи, языком, композиторами, авторами текста и флагом Explicit.
+
+## Файл конфигурации
 
 ```yaml
 auth_token: YOUR_TOKEN
@@ -42,6 +44,139 @@ presets:
     lyricists: []
 ```
 
-Only the fields above are required in presets. Explicitness and track date are
-set for every track directly in the UI.
+Поле `label_id` связывает артиста с его лейблом. Остальные поля не обязательны. Флажок Explicit и дата трека задаются вручную в интерфейсе.
 
+## Справочник API
+
+Все запросы выполняются на `https://v2api.musicalligator.com` и требуют заголовок `Authorization` с токеном сессии.
+
+### Аутентификация
+
+**Тип запроса:** `GET`
+
+**URL:** `/api/auth/authenticate`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| — | — | Только заголовок `Authorization` |
+
+### Поиск артистов
+
+**Тип запроса:** `GET`
+
+**URL:** `/api/artists`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `name` | string | Строка поиска по имени артиста |
+
+### Список лейблов
+
+**Тип запроса:** `GET`
+
+**URL:** `/api/labels`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `_status` | string | Значение `READY` |
+| `level` | string | Например, `REGULAR` |
+| `skip` | integer | Смещение выдачи |
+| `limit` | integer | Количество элементов |
+
+### Создание черновика
+
+**Тип запроса:** `POST`
+
+**URL:** `/api/releases/create`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `releaseType` | string | Тип релиза (обычно `SINGLE`) |
+
+### Получение релиза
+
+**Тип запроса:** `GET`
+
+**URL:** `/api/releases/{releaseId}`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `releaseId` | integer | Идентификатор релиза в пути |
+
+### Обновление релиза
+
+**Тип запроса:** `PUT`
+
+**URL:** `/api/releases/{releaseId}`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `title` | string | Название релиза |
+| `releaseDate` | string | Дата выхода `YYYY-MM-DD` |
+| `originalReleaseDate` | string | Первоначальная дата релиза |
+| `clineYear` | string | Год права C |
+| `clineValue` | string | Правообладатель C |
+| `plineYear` | string | Год права P |
+| `plineValue` | string | Правообладатель P |
+| `status` | string | Статус, например `DRAFT` |
+| `client.id` | integer | ID клиента (артиста) |
+| `labelId` | integer | ID лейбла |
+| `genres` | array | Список жанров `{genreId}` |
+| `tracks` | array | Список треков `{trackId}` |
+| `streamingPlatforms` | array | ID платформ |
+| `countries` | array | Ограничения по странам |
+
+### Загрузка обложки
+
+**Тип запроса:** `POST`
+
+**URL:** `/api/releases/{releaseId}/cover`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `file` | file | PNG-файл обложки (multipart) |
+
+### Загрузка аудио
+
+**Тип запроса:** `POST`
+
+**URL:** `/api/releases/{releaseId}/tracks/{trackId}/upload`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `file` | file | WAV-файл аудио (multipart) |
+
+### Выбор платформ
+
+**Тип запроса:** `PUT`
+
+**URL:** `/api/releases/{releaseId}/platforms`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `platformIds` | array | Список ID платформ |
+
+### Обновление трека
+
+**Тип запроса:** `PUT`
+
+**URL:** `/api/tracks/{trackId}`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `recordingYear` | integer | Год записи |
+| `language` | integer | ID языка |
+| `composers` | array | ID композиторов |
+| `lyricists` | array | ID авторов текста |
+
+### Список платформ
+
+**Тип запроса:** `GET`
+
+**URL:** `/api/platform/platforms/streaming`
+
+| Параметр | Тип | Описание |
+|---------|------|----------|
+| `withProvidersOnly` | boolean | Только платформы с провайдерами |
+
+*Документация основана на перехваченных запросах и может быть неполной.*

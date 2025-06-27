@@ -184,6 +184,7 @@ for base, files in groups.items():
     m = re.search(r"\(([^()]*)\)\s*$", title_part)
     if m:
         ver = m.group(1).strip()
+        title_part = title_part[:m.start()].rstrip()
     found.append({
         "Base": base,
         "Artist": base.split(" - ",1)[0] if " - " in base else "",

@@ -90,7 +90,15 @@ def check_updates():
 
 
 def show_settings(icon, item):
-    os.startfile(CONFIG_PATH)
+    try:
+        if os.name == "nt":
+            os.startfile(CONFIG_PATH)
+        else:
+            import webbrowser
+            if not webbrowser.open(CONFIG_PATH.as_uri()):
+                subprocess.Popen(["xdg-open", str(CONFIG_PATH)])
+    except Exception as e:
+        logging.error("Failed to open config: %s", e)
 
 
 def open_window(icon, item):

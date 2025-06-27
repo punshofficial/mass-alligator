@@ -209,7 +209,11 @@ pyinstaller `
   --noconsole --onefile `
   --icon="application attributes/MASS-ALLIGATOR-ICON.ico" `
   --add-data "application attributes/MASS-ALLIGATOR-ICON.png;application attributes" `
+  --collect-all streamlit `
   run.py
 ```
 
 Полученный `dist/run.exe` содержит встроенный Streamlit-сервер, окно на базе pywebview и иконку в системном трее. Через меню трея можно запускать и останавливать сервер, открывать окно или настройки. При первом запуске рядом с exe будут созданы `config.yaml` и папка `logs`.
+
+Параметр `--collect-all streamlit` добавляет метаданные Streamlit в сборку,
+иначе при запуске можно получить ошибку `PackageNotFoundError`.

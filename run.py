@@ -13,8 +13,17 @@ from PIL import Image
 VERSION = "1.0.0"
 UPDATE_URL = "https://example.com/mass-alligator/version.txt"  # placeholder
 
-APP_DIR = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
-LOG_DIR = APP_DIR / "logs"
+# Base directory where config and logs are stored
+BASE_DIR = (
+    Path(sys.executable).resolve().parent
+    if getattr(sys, "frozen", False)
+    else Path(__file__).resolve().parent
+)
+
+# Directory with bundled resources (when packaged by PyInstaller)
+RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", BASE_DIR))
+
+LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 logging.basicConfig(
     filename=LOG_DIR / "app.log",
@@ -22,9 +31,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
-CONFIG_PATH = APP_DIR / "config.yaml"
-APP_PATH = APP_DIR / "app.py"
-ICON_PATH = APP_DIR / "application attributes" / "MASS-ALLIGATOR-ICON.png"
+CONFIG_PATH = BASE_DIR / "config.yaml"
+APP_PATH = RESOURCE_DIR / "app.py"
+ICON_PATH = RESOURCE_DIR / "application attributes" / "MASS-ALLIGATOR-ICON.png"
 
 server_proc = None
 
@@ -87,12 +96,41 @@ def quit_app(icon, item):
     icon.stop()
 
 
+def load_icon():
+    if ICON_PATH.exists():
+        try:
+            return Image.open(ICON_PATH)
+        except Exception:
+            pass
+    ico_fallback = RESOURCE_DIR / "application attributes" / "MASS-ALLIGATOR-ICON.ico"
+    if ico_fallback.exists():
+        try:
+            return Image.open(ico_fallback)
+        except Exception:
+            pass
+    return Image.new("RGBA", (64, 64), "white")
+
+
 def create_tray():
-    image = Image.open(ICON_PATH)
+    image = load_icon()
+
+    def running():
+        return server_proc and server_proc.poll() is None
+
     menu = pystray.Menu(
         pystray.MenuItem("Open", open_window),
+        pystray.MenuItem(
+            "Start server",
+            lambda icon, item: start_server(),
+            enabled=lambda item: not running(),
+        ),
+        pystray.MenuItem(
+            "Stop server",
+            lambda icon, item: stop_server(),
+            enabled=lambda item: running(),
+        ),
         pystray.MenuItem("Settings", show_settings),
-        pystray.MenuItem("Quit", quit_app)
+        pystray.MenuItem("Quit", quit_app),
     )
     tray = pystray.Icon("mass-alligator", image, "Mass Alligator", menu)
     return tray

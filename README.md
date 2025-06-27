@@ -205,7 +205,11 @@ pip install pyinstaller
 Затем выполните:
 
 ```bash
-pyinstaller --noconsole --onefile --icon="application attributes/MASS-ALLIGATOR-ICON.ico" run.py
+pyinstaller \
+  --noconsole --onefile \
+  --icon="application attributes/MASS-ALLIGATOR-ICON.ico" \
+  --add-data "application attributes/MASS-ALLIGATOR-ICON.png;application attributes" \
+  run.py
 ```
 
-Полученный `dist/run.exe` содержит встроенный Streamlit-сервер, окно на базе pywebview и иконку в системном трее. При первом запуске рядом с exe будут созданы `config.yaml` и папка `logs`.
+Полученный `dist/run.exe` содержит встроенный Streamlit-сервер, окно на базе pywebview и иконку в системном трее. Через меню трея можно запускать и останавливать сервер, открывать окно или настройки. При первом запуске рядом с exe будут созданы `config.yaml` и папка `logs`.

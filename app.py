@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 
 import streamlit as st
-import yaml
+import yaml  # type: ignore
 
 from src.musicalligator_client import MusicAlligatorClient
 

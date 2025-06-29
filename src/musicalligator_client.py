@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import requests
+import requests  # type: ignore
 import streamlit as st
 
 BASE_URL = "https://v2api.musicalligator.com/api"
@@ -117,6 +117,16 @@ class MusicAlligatorClient:
             json={"streamingPlatforms": platforms},
         )
         return resp is not None
+
+    @st.cache_data(show_spinner=False)
+    def get_release(
+        _self: "MusicAlligatorClient", release_id: int
+    ) -> Dict[str, Any] | None:
+        self = _self
+        resp = self._request("GET", f"/releases/{release_id}")
+        if resp is None:
+            return None
+        return resp.json().get("data", {})
 
     def get_statistics(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         resp = self._request("POST", "/statistics", json=payload)

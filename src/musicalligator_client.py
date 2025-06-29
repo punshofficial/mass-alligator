@@ -38,22 +38,18 @@ class MusicAlligatorClient:
             return None
 
     # Cached lookups
-    @st.cache_data(
-        show_spinner=False,
-        hash_funcs={requests.Session: id, Path: str, "MusicAlligatorClient": id},
-    )
-    def get_artists(self) -> Dict[str, int]:
+    @st.cache_data(show_spinner=False)
+    def get_artists(_self: "MusicAlligatorClient") -> Dict[str, int]:
+        self = _self
         resp = self._request("GET", "/artists", params={"name": ""})
         if resp is None:
             return {}
         data = resp.json().get("data", [])
         return {item["name"]: item["id"] for item in data}
 
-    @st.cache_data(
-        show_spinner=False,
-        hash_funcs={requests.Session: id, Path: str, "MusicAlligatorClient": id},
-    )
-    def get_labels(self) -> Dict[str, int]:
+    @st.cache_data(show_spinner=False)
+    def get_labels(_self: "MusicAlligatorClient") -> Dict[str, int]:
+        self = _self
         params = {"_status": "READY", "level": "REGULAR", "skip": 0, "limit": 100}
         resp = self._request("GET", "/labels", params=params)
         if resp is None:
@@ -61,21 +57,19 @@ class MusicAlligatorClient:
         data = resp.json().get("data", {}).get("data", [])
         return {item["name"]: item["id"] for item in data}
 
-    @st.cache_data(
-        show_spinner=False,
-        hash_funcs={requests.Session: id, Path: str, "MusicAlligatorClient": id},
-    )
-    def list_releases(self, **params: Any) -> List[Dict[str, Any]]:
+    @st.cache_data(show_spinner=False)
+    def list_releases(
+        _self: "MusicAlligatorClient", **params: Any
+    ) -> List[Dict[str, Any]]:
+        self = _self
         resp = self._request("GET", "/releases", params=params)
         if resp is None:
             return []
         return resp.json().get("data", [])
 
-    @st.cache_data(
-        show_spinner=False,
-        hash_funcs={requests.Session: id, Path: str, "MusicAlligatorClient": id},
-    )
-    def get_persons(self) -> Dict[str, int]:
+    @st.cache_data(show_spinner=False)
+    def get_persons(_self: "MusicAlligatorClient") -> Dict[str, int]:
+        self = _self
         resp = self._request("GET", "/persons", params={"name": ""})
         if resp is None:
             return {}

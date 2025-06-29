@@ -12,7 +12,7 @@ from src.musicalligator_client import MusicAlligatorClient
 try:
     from streamlit.runtime.scriptrunner import add_script_run_ctx
 except Exception:  # streamlit<1.25
-    add_script_run_ctx = None
+    add_script_run_ctx = None  # type: ignore[assignment]
 import re
 import threading
 
@@ -45,7 +45,7 @@ config = load_config()
 
 # Helper to attach Streamlit context to worker threads
 def run_with_ctx(fn, *args, **kwargs):
-    if add_script_run_ctx:
+    if add_script_run_ctx is not None:
         add_script_run_ctx(threading.current_thread())
     return fn(*args, **kwargs)
 
@@ -88,15 +88,12 @@ except Exception:
     label_map = {}
 
 config.setdefault("artists", {})
+artist_options = list(artist_map.keys())
+default_artists = [a for a in config["artists"].keys() if a in artist_options]
 selected_artists = st.sidebar.multiselect(
-    "Artists",
-    list(artist_map.keys()),
-    default=list(config["artists"].keys()),
-    key="artist_select",
+    "Artists", artist_options, default=default_artists, key="artist_select"
 )
-config["artists"] = {
-    name: artist_map[name] for name in selected_artists if name in artist_map
-}
+config["artists"] = {name: artist_map[name] for name in selected_artists}
 
 config.setdefault("labels", {})
 for name, lid in label_map.items():
@@ -401,4 +398,4 @@ if not st.session_state.upload_done:
 else:
     if st.button("Upload more", key="upload_more"):
         st.session_state.upload_done = False
-        st.experimental_rerun()
+        st.experimental_rerun()  # type: ignore[attr-defined]

@@ -48,14 +48,7 @@ def run_with_ctx(fn, *args, **kwargs):
 st.sidebar.title("Настройки")
 
 config["auth_token"] = st.sidebar.text_input(
-<<<<<<< Updated upstream
-    "Token",
-    config.get("auth_token", ""),
-    type="password",
-    key="token_input"
-=======
     "Токен", config.get("auth_token", ""), type="password", key="token_input"
->>>>>>> Stashed changes
 ).strip()
 
 if config["auth_token"] and not CONFIG_PATH.exists():
@@ -102,15 +95,10 @@ except:
 
 config.setdefault("artists", {})
 selected_artists = st.sidebar.multiselect(
-<<<<<<< Updated upstream
-    "Artists", list(artist_map.keys()),
-    default=list(config["artists"].keys()), key="artist_select"
-=======
     "Артисты",
     list(artist_map.keys()),
     default=list(config["artists"].keys()),
     key="artist_select",
->>>>>>> Stashed changes
 )
 config["artists"] = {name: artist_map[name] for name in selected_artists if name in artist_map}
 
@@ -199,14 +187,9 @@ max_workers = st.sidebar.number_input(
 st.title("Пакетная загрузка релизов")
 st.markdown("Перетащите ниже PNG (обложки) и WAV (аудио) файлы:")
 
-<<<<<<< Updated upstream
-covers = st.file_uploader("Covers (PNG)", type=["png"], accept_multiple_files=True)
-wavs   = st.file_uploader("Audio (WAV)", type=["wav"], accept_multiple_files=True)
-=======
 
 covers = st.file_uploader("Обложки (PNG)", type=["png"], accept_multiple_files=True)
 wavs = st.file_uploader("Аудио (WAV)", type=["wav"], accept_multiple_files=True)
->>>>>>> Stashed changes
 
 # Group files by base name
 groups = {}
@@ -224,17 +207,6 @@ for base, files in groups.items():
     m = re.search(r"\(([^()]*)\)\s*$", title_part)
     if m:
         ver = m.group(1).strip()
-<<<<<<< Updated upstream
-        title_part = title_part[:m.start()].rstrip()
-    found.append({
-        "Base": base,
-        "Artist": base.split(" - ",1)[0] if " - " in base else "",
-        "Title": title_part,
-        "Version": ver,
-        "Cover": "✅" if "cover" in files else "⚠️",
-        "Audio": "✅" if "audio" in files else "⚠️"
-    })
-=======
         title_part = title_part[: m.start()].rstrip()
     found.append(
         {
@@ -246,7 +218,6 @@ for base, files in groups.items():
             "Аудио": "✅" if "audio" in files else "⚠️",
         }
     )
->>>>>>> Stashed changes
 st.table(found)
 
 track_settings = {}

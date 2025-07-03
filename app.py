@@ -48,15 +48,19 @@ def run_with_ctx(fn, *args, **kwargs):
 st.sidebar.title("Настройки")
 
 config["auth_token"] = st.sidebar.text_input(
+<<<<<<< Updated upstream
     "Token",
     config.get("auth_token", ""),
     type="password",
     key="token_input"
+=======
+    "Токен", config.get("auth_token", ""), type="password", key="token_input"
+>>>>>>> Stashed changes
 ).strip()
 
 if config["auth_token"] and not CONFIG_PATH.exists():
     save_config(config)
-    st.sidebar.success("Config created")
+    st.sidebar.success("Успешно")
 
 
 # Prepare HTTP session
@@ -98,8 +102,15 @@ except:
 
 config.setdefault("artists", {})
 selected_artists = st.sidebar.multiselect(
+<<<<<<< Updated upstream
     "Artists", list(artist_map.keys()),
     default=list(config["artists"].keys()), key="artist_select"
+=======
+    "Артисты",
+    list(artist_map.keys()),
+    default=list(config["artists"].keys()),
+    key="artist_select",
+>>>>>>> Stashed changes
 )
 config["artists"] = {name: artist_map[name] for name in selected_artists if name in artist_map}
 
@@ -109,7 +120,7 @@ for name, lid in label_map.items():
 
 config.setdefault("streaming_platforms", [195, 196, 197])
 platforms_text = st.sidebar.text_input(
-    "Platforms (comma separated)",
+    "Платформы (через запятую)",
     ",".join(str(p) for p in config.get("streaming_platforms", [])),
     key="platforms_input"
 )
@@ -119,7 +130,7 @@ except ValueError:
     st.sidebar.error("Invalid platform IDs")
 
 # Presets per artist
-st.sidebar.markdown("### Presets (per-artist)")
+st.sidebar.markdown("### Пресеты")
 presets_ui = {}
 for artist_name in config["artists"]:
     default = config.get("presets", {}).get(artist_name, {})
@@ -174,22 +185,28 @@ for artist_name in config["artists"]:
     }
 config["presets"] = presets_ui
 
-if st.sidebar.button("Save config", key="save_config"):
+if st.sidebar.button("Сохранить настройки", key="save_config"):
     save_config(config)
-    st.sidebar.success("Config saved")
+    st.sidebar.success("Успешно")
 
 max_workers = st.sidebar.number_input(
-    "Parallel uploads", min_value=1, max_value=5, value=1, step=1, key="workers"
+    "Потоки", min_value=1, max_value=5, value=1, step=1, key="workers"
 )
 
 # —————————————
 # Main UI
 # —————————————
-st.title("Batch Upload Releases")
-st.markdown("Drag & drop your PNG (cover) and WAV (audio) files:")
+st.title("Пакетная загрузка релизов")
+st.markdown("Перетащите ниже PNG (обложки) и WAV (аудио) файлы:")
 
+<<<<<<< Updated upstream
 covers = st.file_uploader("Covers (PNG)", type=["png"], accept_multiple_files=True)
 wavs   = st.file_uploader("Audio (WAV)", type=["wav"], accept_multiple_files=True)
+=======
+
+covers = st.file_uploader("Обложки (PNG)", type=["png"], accept_multiple_files=True)
+wavs = st.file_uploader("Аудио (WAV)", type=["wav"], accept_multiple_files=True)
+>>>>>>> Stashed changes
 
 # Group files by base name
 groups = {}
@@ -198,7 +215,7 @@ for f in covers:
 for f in wavs:
     groups.setdefault(Path(f.name).stem, {})["audio"] = f
 
-st.write("Found releases:")
+st.write("Найденные релизы:")
 
 found = []
 for base, files in groups.items():
@@ -207,6 +224,7 @@ for base, files in groups.items():
     m = re.search(r"\(([^()]*)\)\s*$", title_part)
     if m:
         ver = m.group(1).strip()
+<<<<<<< Updated upstream
         title_part = title_part[:m.start()].rstrip()
     found.append({
         "Base": base,
@@ -216,6 +234,19 @@ for base, files in groups.items():
         "Cover": "✅" if "cover" in files else "⚠️",
         "Audio": "✅" if "audio" in files else "⚠️"
     })
+=======
+        title_part = title_part[: m.start()].rstrip()
+    found.append(
+        {
+            "Оригинальный файл": base,
+            "Артист": base.split(" - ", 1)[0] if " - " in base else "",
+            "Название": title_part,
+            "Версия": ver,
+            "Обложка": "✅" if "cover" in files else "⚠️",
+            "Аудио": "✅" if "audio" in files else "⚠️",
+        }
+    )
+>>>>>>> Stashed changes
 st.table(found)
 
 track_settings = {}
@@ -223,12 +254,12 @@ for base, files in groups.items():
     artist = base.split(" - ",1)[0] if " - " in base else base
     with st.expander(base, expanded=False):
         p_exp = st.checkbox("Explicit", value=False, key=f"ex_{base}")
-        p_date = st.date_input("Track Date", value=date.today(), key=f"td_{base}")
+        p_date = st.date_input("Дата релиза", value=date.today(), key=f"td_{base}")
     track_settings[base] = {"explicit": p_exp, "track_date": p_date.isoformat()}
 
 
 def batch_update_tracks(release_id, track_list, sess):
-    st.write("→ Updating track metadata…")
+    st.write("→ Обновление метаданных трека...")
     for meta in track_list:
         tid = meta.get("trackId")
         data = {k: v for k, v in meta.items() if k != "trackId"}
@@ -423,9 +454,9 @@ if "upload_done" not in st.session_state:
     st.session_state.upload_done = False
 
 if not st.session_state.upload_done:
-    if st.button("Run upload", key="upload_button"):
+    if st.button("Начать загрузку", key="upload_button"):
         run_all_uploads()
 else:
-    if st.button("Upload more", key="upload_more"):
+    if st.button("Загрузить больше", key="upload_more"):
         st.session_state.upload_done = False
         st.experimental_rerun()

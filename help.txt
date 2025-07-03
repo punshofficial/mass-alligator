@@ -1,1 +1,9 @@
-Сборка: streamlit-desktop-app build app.py --name MassAlligator --icon APP_Atributes\icon.ico --pyinstaller-options --noconfirm 
+Сборка: streamlit-desktop-app build app.py --name MassAlligator --icon APPAtributes\icon.ico --pyinstaller-options --noconfirm 
+
+тест:
+streamlit-desktop-app build app.py `
+  --name MassAlligator `
+  --icon APPAtributes\icon.ico `
+  --pyinstaller-options `
+      --noconfirm `
+      --add-data "pages;pages"

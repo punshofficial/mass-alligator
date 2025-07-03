@@ -1,0 +1,4 @@
+blend_mode: overlay
+opacity: 24
+output_dir: covers_export
+texture_path: textures\noise.png

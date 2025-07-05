@@ -32,8 +32,8 @@ def save_config(cfg: dict) -> None:
 
 config: Dict[str, Optional[str | int]] = load_config()
 
-st.set_page_config(page_title="Batch Cover Matcher", layout="wide")
-st.title("🎧 Batch Cover Matcher for EDM Covers")
+st.set_page_config(page_title="Массовая обработка обложек", layout="wide")
+st.title("🎧 Массовая обработка обложек")
 
 with st.sidebar:
     st.header("⚙️ Настройки")
@@ -100,7 +100,7 @@ for wav in wavs:
             st.image(img, width=120)
             cover_data[wav.name] = data
 
-if st.button("▶️ Run"):
+if st.button("▶️ Запуск"):
     missing = [w.name for w in wavs if w.name not in cover_data]
     if missing:
         st.error(f"Нет обложек для: {', '.join(missing)}")

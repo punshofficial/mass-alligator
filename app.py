@@ -56,12 +56,12 @@ def run_with_ctx(fn, *args, **kwargs):
 st.sidebar.title("Настройки")
 
 config["auth_token"] = st.sidebar.text_input(
-    "Token", config.get("auth_token", ""), type="password", key="token_input"
+    "Токен", config.get("auth_token", ""), type="password", key="token_input"
 ).strip()
 
 if config["auth_token"] and not CONFIG_PATH.exists():
     save_config(config)
-    st.sidebar.success("Config created")
+    st.sidebar.success("Конфигурация создана")
 
 
 # Prepare HTTP session
@@ -115,7 +115,7 @@ except:
 
 config.setdefault("artists", {})
 selected_artists = st.sidebar.multiselect(
-    "Artists",
+    "Артисты",
     list(artist_map.keys()),
     default=list(config["artists"].keys()),
     key="artist_select",
@@ -130,7 +130,7 @@ for name, lid in label_map.items():
 
 config.setdefault("streaming_platforms", [195, 196, 197])
 platforms_text = st.sidebar.text_input(
-    "Platforms (comma separated)",
+    "Площадки (через запятую)",
     ",".join(str(p) for p in config.get("streaming_platforms", [])),
     key="platforms_input",
 )
@@ -139,10 +139,10 @@ try:
         int(x) for x in platforms_text.split(",") if x.strip()
     ]
 except ValueError:
-    st.sidebar.error("Invalid platform IDs")
+    st.sidebar.error("Некорректные ID площадок")
 
 # Presets per artist
-st.sidebar.markdown("### Presets (per-artist)")
+st.sidebar.markdown("### Пресеты (для артиста)")
 presets_ui = {}
 for artist_name in config["artists"]:
     default = config.get("presets", {}).get(artist_name, {})
@@ -152,23 +152,23 @@ for artist_name in config["artists"]:
     ids = list(config["labels"].values())
     sel = default.get("label_id")
     idx = ids.index(sel) if sel in ids else 0
-    p_label = exp.selectbox("Label", names, index=idx, key=f"lbl_{artist_name}")
+    p_label = exp.selectbox("Лейбл", names, index=idx, key=f"lbl_{artist_name}")
     # Genre
     p_genre = exp.number_input(
-        "Main Genre ID",
+        "ID основного жанра",
         value=default.get("genre_id", 0),
         step=1,
         key=f"genre_{artist_name}",
     )
     # Track defaults
     p_year = exp.number_input(
-        "Recording Year",
+        "Год записи",
         value=default.get("recording_year", date.today().year),
         step=1,
         key=f"year_{artist_name}",
     )
     p_lang = exp.number_input(
-        "Language ID",
+        "ID языка",
         value=default.get("language_id", 7),
         step=1,
         key=f"lang_{artist_name}",
@@ -184,10 +184,10 @@ for artist_name in config["artists"]:
         for lid in default.get("lyricists", [])
     ]
     comp_sel = exp.multiselect(
-        "Composers", person_names, default=comp_default, key=f"comp_{artist_name}"
+        "Композиторы", person_names, default=comp_default, key=f"comp_{artist_name}"
     )
     lyric_sel = exp.multiselect(
-        "Lyricists", person_names, default=lyric_default, key=f"lyric_{artist_name}"
+        "Авторы текста", person_names, default=lyric_default, key=f"lyric_{artist_name}"
     )
     presets_ui[artist_name] = {
         "label_id": config["labels"][p_label],
@@ -199,23 +199,23 @@ for artist_name in config["artists"]:
     }
 config["presets"] = presets_ui
 
-if st.sidebar.button("Save config", key="save_config"):
+if st.sidebar.button("Сохранить конфиг", key="save_config"):
     save_config(config)
-    st.sidebar.success("Config saved")
+    st.sidebar.success("Конфигурация сохранена")
 
 max_workers = st.sidebar.number_input(
-    "Parallel uploads", min_value=1, max_value=5, value=1, step=1, key="workers"
+    "Параллельные загрузки", min_value=1, max_value=5, value=1, step=1, key="workers"
 )
 
 # —————————————
 # Main UI
 # —————————————
-st.title("Batch Upload Releases")
-st.markdown("Drag & drop your PNG (cover) and WAV (audio) files:")
+st.title("Массовая загрузка релизов")
+st.markdown("Перетащите файлы PNG (обложки) и WAV (аудио):")
 
 
-covers = st.file_uploader("Covers (PNG)", type=["png"], accept_multiple_files=True)
-wavs = st.file_uploader("Audio (WAV)", type=["wav"], accept_multiple_files=True)
+covers = st.file_uploader("Обложки (PNG)", type=["png"], accept_multiple_files=True)
+wavs = st.file_uploader("Аудио (WAV)", type=["wav"], accept_multiple_files=True)
 
 # Group files by base name
 groups: dict[str, dict[str, UploadedFile]] = {}
@@ -224,7 +224,7 @@ for f in covers:
 for f in wavs:
     groups.setdefault(Path(f.name).stem, {})["audio"] = f
 
-st.write("Found releases:")
+st.write("Найденные релизы:")
 
 found = []
 for base, files in groups.items():
@@ -236,12 +236,12 @@ for base, files in groups.items():
         title_part = title_part[: m.start()].rstrip()
     found.append(
         {
-            "Base": base,
-            "Artist": base.split(" - ", 1)[0] if " - " in base else "",
-            "Title": title_part,
-            "Version": ver,
-            "Cover": "✅" if "cover" in files else "⚠️",
-            "Audio": "✅" if "audio" in files else "⚠️",
+            "Файл": base,
+            "Артист": base.split(" - ", 1)[0] if " - " in base else "",
+            "Название": title_part,
+            "Версия": ver,
+            "Обложка": "✅" if "cover" in files else "⚠️",
+            "Аудио": "✅" if "audio" in files else "⚠️",
         }
     )
 st.table(found)
@@ -250,13 +250,13 @@ track_settings = {}
 for base, files in groups.items():
     artist = base.split(" - ", 1)[0] if " - " in base else base
     with st.expander(base, expanded=False):
-        p_exp = st.checkbox("Explicit", value=False, key=f"ex_{base}")
-        p_date = st.date_input("Track Date", value=date.today(), key=f"td_{base}")
+        p_exp = st.checkbox("Ненормативная лексика", value=False, key=f"ex_{base}")
+        p_date = st.date_input("Дата трека", value=date.today(), key=f"td_{base}")
     track_settings[base] = {"explicit": p_exp, "track_date": p_date.isoformat()}
 
 
 def batch_update_tracks(release_id, track_list, sess):
-    st.write("→ Updating track metadata…")
+    st.write("→ Обновление метаданных трека…")
     for meta in track_list:
         tid = meta.get("trackId")
         data = {k: v for k, v in meta.items() if k != "trackId"}
@@ -264,7 +264,7 @@ def batch_update_tracks(release_id, track_list, sess):
             f"https://v2api.musicalligator.com/api/releases/{release_id}/tracks/{tid}",
             json=data,
         )
-        st.write(f"Track {tid} update: {r.status_code}")
+        st.write(f"Обновление трека {tid}: {r.status_code}")
         if r.status_code >= 400:
             st.write(r.text)
 
@@ -285,24 +285,24 @@ def set_release_label(release_id: int, label_id: int, year: int, sess):
         "clineYear": str(year),
         "plineYear": str(year),
     }
-    st.write("→ Setting label…")
+    st.write("→ Установка лейбла…")
     r = sess.put(
         f"https://v2api.musicalligator.com/api/releases/{release_id}",
         json=data,
     )
-    st.write(f"Label update: {r.status_code}")
+    st.write(f"Ответ на изменение лейбла: {r.status_code}")
     if r.status_code >= 400:
         st.write(r.text)
 
 
 def set_streaming_platforms(release_id: int, platforms: list[int], sess):
     data = {"streamingPlatforms": platforms}
-    st.write("→ Setting platforms…")
+    st.write("→ Установка площадок…")
     r = sess.put(
         f"https://v2api.musicalligator.com/api/releases/{release_id}",
         json=data,
     )
-    st.write(f"Platforms update: {r.status_code}")
+    st.write(f"Ответ на изменение площадок: {r.status_code}")
     if r.status_code >= 400:
         st.write(r.text)
 
@@ -324,16 +324,16 @@ def upload_release(base, files, opts):
     artist_id = config["artists"][artist]
 
     # 1) Создать черновик
-    st.write(f"→ Creating draft for '{title}'…")
+    st.write(f"→ Создание черновика для '{title}'…")
     r1 = local.post(
         "https://v2api.musicalligator.com/api/releases/create",
         json={"releaseType": "SINGLE"},
     )
     if r1.status_code != 201:
-        st.error(f"Create failed: {r1.status_code} {r1.text}")
+        st.error(f"Ошибка создания: {r1.status_code} {r1.text}")
         return
     rid = r1.json()["data"]["release"]["releaseId"]
-    st.write(f"Draft {rid} created")
+    st.write(f"Черновик {rid} создан")
 
     # 2) Обновить базовые метаданные релиза
     track0 = r1.json()["data"]["release"]["tracks"][0]["trackId"]
@@ -355,7 +355,7 @@ def upload_release(base, files, opts):
     r2 = local.put(
         f"https://v2api.musicalligator.com/api/releases/{rid}", json=meta_release
     )
-    st.write(f"Metadata updated: {r2.status_code}")
+    st.write(f"Метаданные обновлены: {r2.status_code}")
     if r2.status_code >= 400:
         st.write(r2.text)
 
@@ -367,33 +367,33 @@ def upload_release(base, files, opts):
 
     # 3) Upload cover
     if "cover" in files:
-        st.write("→ Uploading cover…")
+        st.write("→ Загрузка обложки…")
         r3 = local.post(
             f"https://v2api.musicalligator.com/api/releases/{rid}/cover",
             files={"file": (files["cover"].name, files["cover"], "image/png")},
         )
-        st.write(f"Cover upload: {r3.status_code}")
+        st.write(f"Ответ загрузки обложки: {r3.status_code}")
         if r3.status_code >= 400:
             st.write(r3.text)
 
     # 4) Upload audio на правильный endpoint
     if "audio" in files:
-        st.write("→ Uploading audio…")
+        st.write("→ Загрузка аудио…")
         fa = files["audio"]
         r4 = local.post(
             f"https://v2api.musicalligator.com/api/releases/{rid}/tracks/{track0}/upload",
             files={"file": (fa.name, fa, "audio/wav")},
         )
-        st.write(f"Audio upload: {r4.status_code}")
+        st.write(f"Ответ загрузки аудио: {r4.status_code}")
         if r4.status_code not in (200, 201):
-            st.error("Audio upload failed")
+            st.error("Не удалось загрузить аудио")
             st.write(r4.text)
             return
 
         # 5) Обновить метаданные трека
         if not preset.get("composers") or not preset.get("lyricists"):
-            st.warning(f"Отсутствуют composers/lyricists для {artist}")
-        st.write("→ Preparing track metadata…")
+            st.warning(f"Отсутствуют композиторы/авторы текста для {artist}")
+        st.write("→ Подготовка метаданных трека…")
         persons = [{"id": c, "role": "MUSIC_AUTHOR"} for c in preset["composers"]] + [
             {"id": l, "role": "LYRICS_AUTHOR"} for l in preset["lyricists"]
         ]
@@ -426,7 +426,7 @@ def upload_release(base, files, opts):
         local,
     )
 
-    st.success(f"Release {rid} done!")
+    st.success(f"Релиз {rid} готов!")
     st.markdown(f"[Открыть релиз](https://app.musicalligator.ru/releases/{rid})")
 
 
@@ -450,9 +450,9 @@ if "upload_done" not in st.session_state:
     st.session_state.upload_done = False
 
 if not st.session_state.upload_done:
-    if st.button("Run upload", key="upload_button"):
+    if st.button("Запустить загрузку", key="upload_button"):
         run_all_uploads()
 else:
-    if st.button("Upload more", key="upload_more"):
+    if st.button("Загрузить ещё", key="upload_more"):
         st.session_state.upload_done = False
         st.experimental_rerun()

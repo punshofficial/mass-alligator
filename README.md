@@ -1,48 +1,19 @@
 # mass-alligator
 
-Утилита для пакетной загрузки релизов на сервис MusicAlligator. Программа читает пресеты из `config.yaml` и загружает пары файлов PNG и WAV. Для каждого найденного дуэта создаётся черновик релиза, после чего метаданные трека заполняются автоматически.
+## Overview
+Приложение упрощает массовую загрузку релизов на MusicAlligator. Оно сопоставляет
+пары файлов PNG и WAV, создаёт черновики релизов и заполняет метаданные.
 
-## Использование
+## Installation
+Готовая программа распространяется в виде EXE‑файла. Скачайте её и запустите без
+установки дополнительных зависимостей. Для разработки используйте:
 
-1. Установите зависимости:
+```bash
+pip install -r requirements.txt
+python -m streamlit run app.py
+```
 
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. Запустите веб-интерфейс:
-
-   ```bash
-   python -m streamlit run app.py
-   ```
-
-3. В левом меню доступны страницы **Batch Upload Releases** и **Batch Cover Matcher**.
-   Первую используйте для загрузки релизов, вторая подбирает обложки для WAV-файлов.
-   
-   The sidebar now offers **Batch Upload Releases** and **Batch Cover Matcher** pages.
-   Use the first one to upload releases; the second matches covers with WAV files.
-   
-4. При первом запуске введите токен авторизации в боковой панели. Если `config.yaml` отсутствует, он будет создан автоматически.
-   Выберите артистов, которых хотите настроить, в списке **Artists**.
-   Файл `config.yaml` хранит ваши токены и добавлен в `.gitignore`.
-
-5. Перетащите WAV и PNG файлы на страницу. Названия пар должны совпадать (например, `Artist - Title.wav` и `Artist - Title.png`). Проверьте найденные релизы, при необходимости отметьте *Explicit* и дату трека, затем запустите загрузку. После завершения кнопка *Run upload* сменится на *Upload more*, что позволяет загрузить следующую партию файлов с теми же настройками.
-
-Приложение отправляет запросы к API MusicAlligator, чтобы создать черновик, установить лейбл, загрузить обложку и аудио, а затем обновить метаданные трека (год записи, язык, композиторы и авторы текста).
-
-### Последовательность работы
-
-Для каждой пары файлов выполняются шаги:
-
-1. **Создание черновика** – `POST /api/releases/create` с полем `releaseType=SINGLE`.
-2. **Обновление основных метаданных** – `PUT /api/releases/{id}` с названием, датами, основным артистом и жанром.
-3. **Установка лейбла** – `PUT /api/releases/{id}` с `labelId`, а также полями `clineValue`, `clineYear`, `plineValue`, `plineYear` из пресета артиста.
-4. **Загрузка обложки** – `POST /api/releases/{id}/cover` с PNG файлом.
-5. **Загрузка аудио** – `POST /api/releases/{id}/tracks/{tid}/upload` с WAV файлом.
-6. **Обновление метаданных трека** – `PUT /api/releases/{id}/tracks/{tid}` с годом записи, языком, композиторами, авторами текста и флагом Explicit.
-7. **Выбор площадок** – `PUT /api/releases/{id}` с полем `streamingPlatforms`.
-
-## Файл конфигурации
-
+## Configuration (`config.yaml` schema)
 ```yaml
 auth_token: YOUR_TOKEN
 artists:
@@ -59,142 +30,123 @@ presets:
     composers: []
     lyricists: []
 ```
+Файл конфигурации создаётся при первом запуске. Сохраните его для обновлений.
 
-Поле `label_id` связывает артиста с его лейблом. Остальные поля не обязательны. Флажок Explicit и дата трека задаются вручную в интерфейсе.
-Список композиторов и авторов текста подгружается автоматически, достаточно выбрать нужные имена из выпадающего списка.
-Массив `streaming_platforms` задаёт ID площадок распространения.
+## Usage
+1. Запустите программу и введите токен авторизации.
+2. Перетащите пары WAV и PNG с одинаковым именем. Другие форматы не поддерживаются.
+3. После проверки нажмите *Run upload* и дождитесь завершения.
 
-## Справочник API
 
-Все запросы выполняются на `https://v2api.musicalligator.com` и требуют заголовок `Authorization` с токеном сессии.
+### Площадки распространения
+Ниже приведены идентификаторы стриминговых платформ из примера
+`/platform/platforms/streaming` файла `openapi.yaml`.
 
-### Аутентификация
+| id | Площадка |
+|---|---|
+| 282 | Apple Music |
+| 284 | Beatport |
+| 220 | Facebook/Instagram |
+| 286 | iTunes Music Store |
+| 264 | SoundCloud |
+| 291 | Spotify |
+| 267 | TIDAL |
+| 269 | TikTok Fingerprinting |
+| 197 | VK Music |
+| 200 | YouTube Music |
+| 195 | Zvuk |
+| 196 | Yandex.Music |
+| 206 | 7Digital |
+| 202 | ACRCloud |
+| 193 | ADV |
+| 207 | Amazon |
+| 208 | Amazon Video |
+| 209 | Ami Entertainment |
+| 292 | Anghami |
+| 293 | Anghami Video |
+| 283 | Apple Video |
+| 211 | AudibleMagic |
+| 212 | AWA |
+| 213 | Beatsource |
+| 214 | Bleep |
+| 215 | Bmat |
+| 205 | Boomplay Video |
+| 216 | Bugs! |
+| 217 | ClicknClear |
+| 285 | Deezer |
+| 629 | Digital Stores |
+| 218 | Dreamus Company (FLO) |
+| 615 | Facebook Fingerprinting |
+| 616 | Facebook Video Fingerprinting |
+| 222 | fizy |
+| 223 | fizy Video |
+| 224 | Genie Music |
+| 225 | Gracenote |
+| 226 | GrooveFox |
+| 227 | Hardstyle.com |
+| 620 | HighResAudio |
+| 278 | Hungama |
+| 279 | Hungama Video |
+| 229 | iHeartRadio |
+| 230 | iMusica |
+| 294 | Jaxsta Music |
+| 231 | JioSaavn |
+| 232 | Joox |
+| 233 | Juno Records |
+| 234 | Kakao / MelOn |
+| 235 | KkBox |
+| 236 | Kuack Media |
+| 237 | Lickd |
+| 238 | LINE Music |
+| 240 | LyricFind |
+| 241 | MePlaylist |
+| 287 | Microsoft (Xbox, Zune) |
+| 242 | Mixcloud |
+| 288 | MixUpload |
+| 243 | MonkingMe |
+| 244 | MoodAgent |
+| 246 | Music Worx |
+| 247 | MUSICAROMA |
+| 280 | MusixMatch |
+| 249 | Muska |
+| 251 | Naver Music |
+| 252 | NetEase Cloud Music |
+| 254 | Nightlife Music |
+| 255 | Nuuday A/S |
+| 289 | Pandora |
+| 257 | Peloton |
+| 258 | Phononet |
+| 621 | Pretzel Rocks |
+| 259 | Qobuz |
+| 261 | Roxi Music Videos |
+| 290 | Shazam |
+| 262 | Sirius XM |
+| 263 | Slacker |
+| 265 | Stellar Entertainment |
+| 266 | Tencent |
+| 268 | TIDAL Video |
+| 271 | TouchTunes / PlayNetwork |
+| 272 | Traxsource.com |
+| 273 | Trebel Music |
+| 198 | VK Video |
+| 275 | Xite |
+| 624 | Yandex.Video |
+| 199 | YouTube Content ID |
+| 201 | YouTube Video |
 
-**Тип запроса:** `GET`
+## Packaging
+Сборка EXE выполняется библиотекой `streamlit-desktop-app`.
 
-**URL:** `/api/auth/authenticate`
+```bash
+python -m streamlit_desktop_app build
+```
 
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| — | — | Только заголовок `Authorization` |
+## FAQ / Troubleshooting
+*Пока пусто.*
 
-### Поиск артистов
-
-**Тип запроса:** `GET`
-
-**URL:** `/api/artists`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `name` | string | Строка поиска по имени артиста |
-
-### Список лейблов
-
-**Тип запроса:** `GET`
-
-**URL:** `/api/labels`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `_status` | string | Значение `READY` |
-| `level` | string | Например, `REGULAR` |
-| `skip` | integer | Смещение выдачи |
-| `limit` | integer | Количество элементов |
-
-### Создание черновика
-
-**Тип запроса:** `POST`
-
-**URL:** `/api/releases/create`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `releaseType` | string | Тип релиза (обычно `SINGLE`) |
-
-### Получение релиза
-
-**Тип запроса:** `GET`
-
-**URL:** `/api/releases/{releaseId}`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `releaseId` | integer | Идентификатор релиза в пути |
-
-### Обновление релиза
-
-**Тип запроса:** `PUT`
-
-**URL:** `/api/releases/{releaseId}`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `title` | string | Название релиза |
-| `releaseDate` | string | Дата выхода `YYYY-MM-DD` |
-| `originalReleaseDate` | string | Первоначальная дата релиза |
-| `clineYear` | string | Год права C |
-| `clineValue` | string | Правообладатель C |
-| `plineYear` | string | Год права P |
-| `plineValue` | string | Правообладатель P |
-| `status` | string | Статус, например `DRAFT` |
-| `client.id` | integer | ID клиента (артиста) |
-| `labelId` | integer | ID лейбла |
-| `genres` | array | Список жанров `{genreId}` |
-| `tracks` | array | Список треков `{trackId}` |
-| `streamingPlatforms` | array | ID платформ |
-| `countries` | array | Ограничения по странам |
-
-### Загрузка обложки
-
-**Тип запроса:** `POST`
-
-**URL:** `/api/releases/{releaseId}/cover`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `file` | file | PNG-файл обложки (multipart) |
-
-### Загрузка аудио
-
-**Тип запроса:** `POST`
-
-**URL:** `/api/releases/{releaseId}/tracks/{trackId}/upload`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `file` | file | WAV-файл аудио (multipart) |
-
-### Выбор платформ
-
-**Тип запроса:** `PUT`
-
-**URL:** `/api/releases/{releaseId}/platforms`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `platformIds` | array | Список ID платформ |
-
-### Обновление трека
-
-**Тип запроса:** `PUT`
-
-**URL:** `/api/tracks/{trackId}`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `recordingYear` | integer | Год записи |
-| `language` | integer | ID языка |
-| `composers` | array | ID композиторов |
-| `lyricists` | array | ID авторов текста |
-
-### Список платформ
-
-**Тип запроса:** `GET`
-
-**URL:** `/api/platform/platforms/streaming`
-
-| Параметр | Тип | Описание |
-|---------|------|----------|
-| `withProvidersOnly` | boolean | Только платформы с провайдерами |
-
-*Документация основана на перехваченных запросах и может быть неполной.*
+## ROADMAP
+- Добавление нескольких треков в один релиз
+- Массовая отправка релиза на модерацию
+- Выбор жанра не по ID, а по названию
+- Выбор языка не по ID, а по названию
+- Выбор площадок не по ID, а по названию

@@ -53,7 +53,12 @@ def fetch_drafts(artist_id: int, session: requests.Session) -> List[Dict[str, An
             json=payload,
         )
         if r.status_code in (200, 201):
-            return r.json().get("data", {}).get("data", [])
+            all_drafts = r.json().get("data", {}).get("data", [])
+            return [
+                d
+                for d in all_drafts
+                if any(a.get("id") == artist_id for a in d.get("artists", []))
+            ]
         st.toast(f"Ошибка загрузки: {r.status_code}")
     except Exception as exc:  # noqa: BLE001
         st.toast(f"Ошибка запроса: {exc}")
@@ -96,23 +101,33 @@ if st.button("Обновить список"):
     st.session_state.drafts = fetch_drafts(artists[artist_name], session)
 
 if st.session_state.drafts:
-    data = [
-        {
-            "releaseId": d.get("releaseId"),
-            "title": d.get("title", ""),
-            "select": False,
-        }
-        for d in st.session_state.drafts
-    ]
+    id_to_name = {v: k for k, v in artists.items()}
+    rows = []
+    for d in st.session_state.drafts:
+        ids = [a.get("id") for a in d.get("artists", [])]
+        names = [id_to_name.get(i, str(i)) for i in ids]
+        date = d.get("releaseDate", "")
+        if isinstance(date, str) and "T" in date:
+            date = date.split("T")[0]
+        rows.append(
+            {
+                "ID": d.get("releaseId"),
+                "Название": d.get("title", ""),
+                "Версия": d.get("releaseVersion", ""),
+                "Артист": ", ".join(names),
+                "Дата релиза": date,
+                "select": False,
+            }
+        )
     edited = st.data_editor(
-        pd.DataFrame(data),
+        pd.DataFrame(rows),
         num_rows="dynamic",
         use_container_width=True,
         hide_index=True,
         column_config={"select": st.column_config.CheckboxColumn("Отправить")},
         key="release_table",
     )
-    selected_ids = edited[edited["select"]]["releaseId"].tolist()
+    selected_ids = edited[edited["select"]]["ID"].tolist()
     if st.button("Отправить выбранные") and selected_ids:
         for rid in selected_ids:
             if moderate_release(int(rid), session):

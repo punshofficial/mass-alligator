@@ -34,17 +34,26 @@ def build_session(token: str) -> requests.Session:
 
 
 def fetch_drafts(artist_id: int, session: requests.Session) -> List[Dict[str, Any]]:
-    params = {"limit": 100, "skip": 0, "status": "DRAFT", "clientId": artist_id}
+    """Return list of draft releases for the artist."""
+
+    payload = {
+        "status": "DRAFT",
+        "search": "",
+        "startDate": None,
+        "endDate": None,
+        "limit": 50,
+        "skip": 0,
+        "_changes": True,
+        "clientId": artist_id,
+    }
+
     try:
-        r = session.get("https://v2api.musicalligator.com/api/releases", params=params)
-        if r.status_code == 200:
-            data = r.json().get("data", [])
-            return [
-                d
-                for d in data
-                if d.get("status") == "DRAFT"
-                and d.get("client", {}).get("id") == artist_id
-            ]
+        r = session.post(
+            "https://v2api.musicalligator.com/api/releases",
+            json=payload,
+        )
+        if r.status_code in (200, 201):
+            return r.json().get("data", {}).get("data", [])
         st.toast(f"Ошибка загрузки: {r.status_code}")
     except Exception as exc:  # noqa: BLE001
         st.toast(f"Ошибка запроса: {exc}")

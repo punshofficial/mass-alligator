@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List
 
+import pandas as pd
 import requests  # type: ignore
 import streamlit as st
 import yaml  # type: ignore
@@ -33,13 +34,17 @@ def build_session(token: str) -> requests.Session:
 
 
 def fetch_drafts(artist_id: int, session: requests.Session) -> List[Dict[str, Any]]:
+    params = {"limit": 100, "skip": 0, "status": "DRAFT", "clientId": artist_id}
     try:
-        r = session.get(
-            "https://v2api.musicalligator.com/api/releases",
-            params={"status": "DRAFT", "clientId": artist_id, "limit": 100, "skip": 0},
-        )
+        r = session.get("https://v2api.musicalligator.com/api/releases", params=params)
         if r.status_code == 200:
-            return r.json().get("data", [])
+            data = r.json().get("data", [])
+            return [
+                d
+                for d in data
+                if d.get("status") == "DRAFT"
+                and d.get("client", {}).get("id") == artist_id
+            ]
         st.toast(f"Ошибка загрузки: {r.status_code}")
     except Exception as exc:  # noqa: BLE001
         st.toast(f"Ошибка запроса: {exc}")
@@ -82,18 +87,26 @@ if st.button("Обновить список"):
     st.session_state.drafts = fetch_drafts(artists[artist_name], session)
 
 if st.session_state.drafts:
-    options = [
-        f"{d['releaseId']} — {d.get('title', '')}" for d in st.session_state.drafts
+    data = [
+        {
+            "releaseId": d.get("releaseId"),
+            "title": d.get("title", ""),
+            "select": False,
+        }
+        for d in st.session_state.drafts
     ]
-    selection = st.multiselect("Выберите релизы", options)
-    selected_ids = [
-        d["releaseId"]
-        for d, label in zip(st.session_state.drafts, options)
-        if label in selection
-    ]
+    edited = st.data_editor(
+        pd.DataFrame(data),
+        num_rows="dynamic",
+        use_container_width=True,
+        hide_index=True,
+        column_config={"select": st.column_config.CheckboxColumn("Отправить")},
+        key="release_table",
+    )
+    selected_ids = edited[edited["select"]]["releaseId"].tolist()
     if st.button("Отправить выбранные") and selected_ids:
         for rid in selected_ids:
-            if moderate_release(rid, session):
+            if moderate_release(int(rid), session):
                 st.toast(f"Релиз {rid} отправлен")
             else:
                 st.toast(f"Ошибка при отправке {rid}")

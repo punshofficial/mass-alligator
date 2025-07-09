@@ -11,6 +11,7 @@ import yaml  # type: ignore
 CONFIG_PATH = Path("config.yaml")
 
 # Release statuses supported by the API
+# Statuses available for filtering
 STATUS_OPTIONS = [
     "DRAFT",
     "MODERATE",
@@ -21,6 +22,9 @@ STATUS_OPTIONS = [
     "ERROR",
     "REMOVED",
 ]
+
+# Some API endpoints use alternative names
+STATUS_QUERY_MAP: Dict[str, str] = {"PROCESSED": "UPLOADED"}
 
 # Labels for Russian UI
 STATUS_LABELS: Dict[str, str] = {
@@ -63,8 +67,9 @@ def fetch_releases(
     """Return releases for the artist with the given status."""
     limit = 50
     skip = 0
+    query_status = STATUS_QUERY_MAP.get(status, status)
     payload = {
-        "status": status,
+        "status": query_status,
         "search": "",
         "startDate": None,
         "endDate": None,
@@ -83,7 +88,7 @@ def fetch_releases(
             )
             if r.status_code not in (200, 201):
                 st.toast(f"Ошибка загрузки: {r.status_code}")
-                break
+                return releases
             data = r.json().get("data", {}).get("data", [])
             releases.extend(data)
             if len(data) < limit:

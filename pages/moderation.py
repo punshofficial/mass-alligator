@@ -15,6 +15,7 @@ STATUS_OPTIONS = [
     "DRAFT",
     "MODERATE",
     "WAITING",
+    "PROCESSED",
     "RELEASED",
     "EDIT",
     "ERROR",
@@ -25,7 +26,8 @@ STATUS_OPTIONS = [
 STATUS_LABELS: Dict[str, str] = {
     "DRAFT": "Черновиков",
     "MODERATE": "На модерации",
-    "WAITING": "Ожидают",
+    "WAITING": "Ожидают отгрузки",
+    "PROCESSED": "Отгружен",
     "RELEASED": "Выпущено",
     "EDIT": "Редактируются",
     "ERROR": "Ошибки",

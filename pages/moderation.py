@@ -10,6 +10,34 @@ import yaml  # type: ignore
 
 CONFIG_PATH = Path("config.yaml")
 
+# Release statuses supported by the API
+# Statuses available for filtering
+STATUS_OPTIONS = [
+    "DRAFT",
+    "MODERATE",
+    "WAITING",
+    "PROCESSED",
+    "RELEASED",
+    "EDIT",
+    "ERROR",
+    "REMOVED",
+]
+
+# Some API endpoints use alternative names
+STATUS_QUERY_MAP: Dict[str, str] = {"PROCESSED": "UPLOADED"}
+
+# Labels for Russian UI
+STATUS_LABELS: Dict[str, str] = {
+    "DRAFT": "Черновиков",
+    "MODERATE": "На модерации",
+    "WAITING": "Ожидают отгрузки",
+    "PROCESSED": "Отгружен",
+    "RELEASED": "Выпущено",
+    "EDIT": "Редактируются",
+    "ERROR": "Ошибки",
+    "REMOVED": "Удалены",
+}
+
 
 def load_config() -> Dict[str, Any]:
     if CONFIG_PATH.exists():
@@ -33,36 +61,43 @@ def build_session(token: str) -> requests.Session:
     return session
 
 
-def fetch_drafts(artist_id: int, session: requests.Session) -> List[Dict[str, Any]]:
-    """Return list of draft releases for the artist."""
-
+def fetch_releases(
+    artist_id: int, status: str, session: requests.Session
+) -> List[Dict[str, Any]]:
+    """Return releases for the artist with the given status."""
+    limit = 50
+    skip = 0
+    query_status = STATUS_QUERY_MAP.get(status, status)
     payload = {
-        "status": "DRAFT",
+        "status": query_status,
         "search": "",
         "startDate": None,
         "endDate": None,
-        "limit": 50,
-        "skip": 0,
+        "limit": limit,
+        "skip": skip,
         "_changes": True,
-        "clientId": artist_id,
+        "artistId": artist_id,
     }
 
+    releases: List[Dict[str, Any]] = []
     try:
-        r = session.post(
-            "https://v2api.musicalligator.com/api/releases",
-            json=payload,
-        )
-        if r.status_code in (200, 201):
-            all_drafts = r.json().get("data", {}).get("data", [])
-            return [
-                d
-                for d in all_drafts
-                if any(a.get("id") == artist_id for a in d.get("artists", []))
-            ]
-        st.toast(f"Ошибка загрузки: {r.status_code}")
+        while True:
+            r = session.post(
+                "https://v2api.musicalligator.com/api/releases",
+                json=payload,
+            )
+            if r.status_code not in (200, 201):
+                st.toast(f"Ошибка загрузки: {r.status_code}")
+                return releases
+            data = r.json().get("data", {}).get("data", [])
+            releases.extend(data)
+            if len(data) < limit:
+                break
+            skip += limit
+            payload["skip"] = skip
     except Exception as exc:  # noqa: BLE001
         st.toast(f"Ошибка запроса: {exc}")
-    return []
+    return releases
 
 
 def moderate_release(release_id: int, session: requests.Session) -> bool:
@@ -73,7 +108,7 @@ def moderate_release(release_id: int, session: requests.Session) -> bool:
         return r.status_code == 200
     except Exception as exc:  # noqa: BLE001
         st.toast(f"Ошибка модерации {release_id}: {exc}")
-        return False
+    return False
 
 
 config = load_config()
@@ -92,18 +127,52 @@ if not artists:
 
 session = build_session(config["auth_token"])
 
-artist_name = st.selectbox("Артист", list(artists.keys()))
 
-if "drafts" not in st.session_state:
-    st.session_state.drafts = []  # type: ignore[attr-defined]
+def load_release_list() -> None:
+    artist_id = artists[st.session_state.sel_artist]
+    status = st.session_state.sel_status
+    st.session_state.release_list = fetch_releases(artist_id, status, session)
+    st.session_state.stats = {
+        s: (
+            len(st.session_state.release_list)
+            if s == status
+            else len(fetch_releases(artist_id, s, session))
+        )
+        for s in STATUS_OPTIONS
+    }
 
-if st.button("Обновить список"):
-    st.session_state.drafts = fetch_drafts(artists[artist_name], session)
 
-if st.session_state.drafts:
+if "sel_artist" not in st.session_state:
+    st.session_state.sel_artist = list(artists.keys())[0]
+if "sel_status" not in st.session_state:
+    st.session_state.sel_status = STATUS_OPTIONS[0]
+if "release_list" not in st.session_state:
+    load_release_list()
+
+st.selectbox(
+    "Артист",
+    list(artists.keys()),
+    key="sel_artist",
+    on_change=load_release_list,
+)
+st.selectbox(
+    "Статус",
+    STATUS_OPTIONS,
+    key="sel_status",
+    on_change=load_release_list,
+)
+
+if st.session_state.get("stats"):
+    cols = st.columns(len(STATUS_OPTIONS))
+    for col, st_key in zip(cols, STATUS_OPTIONS):
+        col.metric(
+            STATUS_LABELS.get(st_key, st_key), st.session_state.stats.get(st_key, 0)
+        )
+
+if st.session_state.release_list:
     id_to_name = {v: k for k, v in artists.items()}
     rows = []
-    for d in st.session_state.drafts:
+    for d in st.session_state.release_list:
         ids = [a.get("id") for a in d.get("artists", [])]
         names = [id_to_name.get(i, str(i)) for i in ids]
         date = d.get("releaseDate", "")
@@ -132,7 +201,6 @@ if st.session_state.drafts:
         for rid in selected_ids:
             if moderate_release(int(rid), session):
                 st.toast(f"Релиз {rid} отправлен")
-            else:
-                st.toast(f"Ошибка при отправке {rid}")
+        load_release_list()
 else:
-    st.info("Нет загруженных черновиков")
+    st.info("Нет релизов")

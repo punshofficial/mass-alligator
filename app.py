@@ -1,8 +1,10 @@
 # app.py
+from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import requests
 import streamlit as st
@@ -224,8 +226,6 @@ for f in covers:
 for f in wavs:
     groups.setdefault(Path(f.name).stem, {})["audio"] = f
 
-st.write("Найденные релизы:")
-
 found = []
 for base, files in groups.items():
     title_part = base.split(" - ", 1)[1] if " - " in base else base
@@ -240,19 +240,43 @@ for base, files in groups.items():
             "Артист": base.split(" - ", 1)[0] if " - " in base else "",
             "Название": title_part,
             "Версия": ver,
-            "Обложка": "✅" if "cover" in files else "⚠️",
-            "Аудио": "✅" if "audio" in files else "⚠️",
         }
     )
-st.table(found)
 
-track_settings = {}
-for base, files in groups.items():
-    artist = base.split(" - ", 1)[0] if " - " in base else base
-    with st.expander(base, expanded=False):
-        p_exp = st.checkbox("Ненормативная лексика", value=False, key=f"ex_{base}")
-        p_date = st.date_input("Дата трека", value=date.today(), key=f"td_{base}")
-    track_settings[base] = {"explicit": p_exp, "track_date": p_date.isoformat()}
+import pandas as pd
+
+table_cols = [
+    "Файл",
+    "Артист",
+    "Название",
+    "Версия",
+    "Дата трека",
+    "Ненормативная лексика",
+]
+
+if "track_table" not in st.session_state:
+    df = pd.DataFrame(found, columns=["Файл", "Артист", "Название", "Версия"])
+    df["Дата трека"] = date.today()
+    df["Ненормативная лексика"] = False
+    # TODO: обработать колонки ISRC, Язык
+    df["ISRC"] = ""
+    df["Язык"] = ""
+    st.session_state["track_table"] = df
+
+table = st.data_editor(
+    st.session_state["track_table"][table_cols], use_container_width=True
+)
+st.session_state["track_table"].update(table)
+
+track_settings: dict[str, dict[str, Any]] = {}
+for _, row in st.session_state["track_table"].iterrows():
+    track_settings[row["Файл"]] = {
+        "explicit": bool(row["Ненормативная лексика"]),
+        "track_date": str(row["Дата трека"]),
+        "artist": row["Артист"],
+        "title": row["Название"],
+        "version": row["Версия"],
+    }
 
 
 def batch_update_tracks(release_id, track_list, sess):
@@ -307,15 +331,26 @@ def set_streaming_platforms(release_id: int, platforms: list[int], sess):
         st.write(r.text)
 
 
-def upload_release(base, files, opts):
+def upload_release(base: str, files: dict[str, UploadedFile], opts: dict[str, Any]):
     local = requests.Session()
     local.headers.update(session.headers)
-    artist, title = (base.split(" - ", 1) + [""])[:2]
-    version = ""
+
+    artist = opts.get("artist")
+    title = opts.get("title")
+    version = opts.get("version", "")
+
+    if artist is None or title is None:
+        artist, title = (base.split(" - ", 1) + [""])[:2]
+        m = re.search(r"\(([^()]*)\)\s*$", title)
+        if m:
+            version = m.group(1).strip()
+            title = title[: m.start()].rstrip()
+
     m = re.search(r"\(([^()]*)\)\s*$", title)
-    if m:
+    if not version and m:
         version = m.group(1).strip()
         title = title[: m.start()].rstrip()
+
     if artist not in config["artists"]:
         st.error(f"Нет artist_id для '{artist}'")
         return

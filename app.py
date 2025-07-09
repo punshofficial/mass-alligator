@@ -254,19 +254,33 @@ table_cols = [
     "Ненормативная лексика",
 ]
 
-if "track_table" not in st.session_state:
-    df = pd.DataFrame(found, columns=["Файл", "Артист", "Название", "Версия"])
-    df["Дата трека"] = date.today()
-    df["Ненормативная лексика"] = False
+
+def merge_new_tracks(found_rows: list[dict[str, Any]]) -> pd.DataFrame:
+    """Return merged track table preserving user edits."""
+
+    new_df = pd.DataFrame(found_rows, columns=["Файл", "Артист", "Название", "Версия"])
+    new_df["Дата трека"] = date.today()
+    new_df["Ненормативная лексика"] = False
     # TODO: обработать колонки ISRC, Язык
-    df["ISRC"] = ""
-    df["Язык"] = ""
-    st.session_state["track_table"] = df
+    new_df["ISRC"] = ""
+    new_df["Язык"] = ""
+
+    if "track_table" not in st.session_state:
+        return new_df
+
+    old_df = st.session_state["track_table"].copy()
+    old_df = old_df[old_df["Файл"].isin(new_df["Файл"])]
+    merged = pd.concat([old_df, new_df]).drop_duplicates("Файл", keep="first")
+    merged.reset_index(drop=True, inplace=True)
+    return merged
+
+
+st.session_state["track_table"] = merge_new_tracks(found)
 
 table = st.data_editor(
     st.session_state["track_table"][table_cols], use_container_width=True
 )
-st.session_state["track_table"].update(table)
+st.session_state["track_table"][table_cols] = table
 
 track_settings: dict[str, dict[str, Any]] = {}
 for _, row in st.session_state["track_table"].iterrows():

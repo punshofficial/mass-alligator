@@ -97,15 +97,7 @@ When the agent generates human‑readable docs (*README.md*, guides, changelogs)
 
 ---
 
-## 8. Roadmap (optional, non‑blocking)
-
-1. Extract MusicAlligator API calls to `/src/musicalligator_client.py`.
-2. Add unit tests with *pytest* + *vcrpy*.
-3. Replace `start tutorial.txt` with a Markdown guide in `/docs/`.
-
----
-
-## 9. Quick‑start (agent self‑test)
+## 8. Quick‑start (agent self‑test)
 
 The following sequence **MUST** execute without error before any PR is considered "green":
 

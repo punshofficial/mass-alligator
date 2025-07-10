@@ -4,10 +4,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from pathlib import Path
 
-import requests
 import streamlit as st
 import yaml
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+from src.musicalligator_client import MusicAlligatorClient
 
 try:
     from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -64,25 +65,16 @@ if config["auth_token"] and not CONFIG_PATH.exists():
     st.sidebar.success("Конфигурация создана")
 
 
-# Prepare HTTP session
-session = requests.Session()
-session.headers.update(
-    {
-        "Authorization": config["auth_token"],
-        "Accept": "application/json, text/plain, */*",
-        "X-LANG": "RU",
-        "X-Requested-With": "XMLHttpRequest",
-        "Origin": "https://app.musicalligator.ru",
-        "Referer": "https://app.musicalligator.ru/",
-    }
-)
+# Prepare HTTP client
+client = MusicAlligatorClient(config["auth_token"])
+session = client.session
 
 
 @st.cache_data(show_spinner=False)
 def load_persons():
     """Return mapping of name -> id for known persons."""
     try:
-        r = session.get("https://v2api.musicalligator.com/api/persons?name=")
+        r = client.get("/persons?name=")
         if r.status_code == 200:
             return {p["name"]: p["id"] for p in r.json().get("data", [])}
     except Exception:
@@ -92,19 +84,13 @@ def load_persons():
 
 # Fetch artists & labels
 try:
-    art = (
-        session.get("https://v2api.musicalligator.com/api/artists?name=")
-        .json()
-        .get("data", [])
-    )
+    art = client.get("/artists?name=").json().get("data", [])
     artist_map = {a["name"]: a["id"] for a in art}
 except:
     artist_map = {}
 try:
     lbl = (
-        session.get(
-            "https://v2api.musicalligator.com/api/labels?_status=READY&level=REGULAR&skip=0&limit=100"
-        )
+        client.get("/labels?_status=READY&level=REGULAR&skip=0&limit=100")
         .json()
         .get("data", {})
         .get("data", [])
@@ -308,8 +294,7 @@ def set_streaming_platforms(release_id: int, platforms: list[int], sess):
 
 
 def upload_release(base, files, opts):
-    local = requests.Session()
-    local.headers.update(session.headers)
+    local = client.clone_session()
     artist, title = (base.split(" - ", 1) + [""])[:2]
     version = ""
     m = re.search(r"\(([^()]*)\)\s*$", title)

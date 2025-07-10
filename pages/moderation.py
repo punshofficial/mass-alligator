@@ -8,6 +8,8 @@ import requests  # type: ignore
 import streamlit as st
 import yaml  # type: ignore
 
+from src.musicalligator_client import MusicAlligatorClient
+
 CONFIG_PATH = Path("config.yaml")
 
 # Release statuses supported by the API
@@ -44,21 +46,6 @@ def load_config() -> Dict[str, Any]:
         with CONFIG_PATH.open("r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     return {}
-
-
-def build_session(token: str) -> requests.Session:
-    session = requests.Session()
-    session.headers.update(
-        {
-            "Authorization": token,
-            "Accept": "application/json, text/plain, */*",
-            "X-LANG": "RU",
-            "X-Requested-With": "XMLHttpRequest",
-            "Origin": "https://app.musicalligator.ru",
-            "Referer": "https://app.musicalligator.ru/",
-        }
-    )
-    return session
 
 
 def fetch_releases(
@@ -125,7 +112,8 @@ if not artists:
     st.error("В config.yaml нет артистов")
     st.stop()
 
-session = build_session(config["auth_token"])
+client = MusicAlligatorClient(config["auth_token"])
+session = client.session
 
 
 def load_release_list() -> None:

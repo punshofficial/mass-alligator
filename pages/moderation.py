@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -119,15 +120,25 @@ session = client.session
 def load_release_list() -> None:
     artist_id = artists[st.session_state.sel_artist]
     status = st.session_state.sel_status
-    st.session_state.release_list = fetch_releases(artist_id, status, session)
-    st.session_state.stats = {
-        s: (
-            len(st.session_state.release_list)
-            if s == status
-            else len(fetch_releases(artist_id, s, session))
-        )
-        for s in STATUS_OPTIONS
-    }
+    statuses = [status] + [s for s in STATUS_OPTIONS if s != status]
+    progress = st.progress(0.0)
+    results: Dict[str, List[Dict[str, Any]]] = {}
+    with ThreadPoolExecutor() as exe:
+        future_map = {
+            exe.submit(fetch_releases, artist_id, st_key, session): st_key
+            for st_key in statuses
+        }
+        done = 0
+        total = len(future_map)
+        for fut in as_completed(future_map):
+            key = future_map[fut]
+            results[key] = fut.result()
+            done += 1
+            progress.progress(done / total)
+    progress.empty()
+
+    st.session_state.release_list = results.get(status, [])
+    st.session_state.stats = {s: len(results.get(s, [])) for s in STATUS_OPTIONS}
 
 
 if "sel_artist" not in st.session_state:
